@@ -1,6 +1,6 @@
 {
   "name": "dsh-tylina-native",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "type": "module",
   "license": "UNLICENSED",
   "description": "Tylina native runtime bundle for DeepSeek Harness",
@@ -67,7 +67,7 @@
     "tylina-native-darwin-x64": "0.4.1",
     "tylina-native-linux-x64": "0.4.1",
     "tylina-native-linux-arm64": "0.4.1",
-    "tylina-native-win32-x64": "https://github.com/tylina/tylina-issues/releases/download/native-v0.4.1/tylina-native-win32-x64-0.4.1.tgz",
+    "tylina-native-win32-x64": "npm:@orangex4/tylina-native-win32-x64@0.4.1",
     "tylina-native-win32-arm64": "0.4.1"
   },
   "peerDependenciesMeta": {

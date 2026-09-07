@@ -62,7 +62,7 @@ dsh plugin --profile web add /absolute/path/dsh-tylina-0.4.1.tgz
 dsh --profile web
 ```
 
-For native compilation, install `dsh-tylina-native-0.4.1.tgz` instead.
+For native compilation, install `dsh-tylina-native-0.4.2.tgz` instead.
 Remove the previous variant with `dsh plugin --profile web remove dsh-tylina` before switching.
 The bundles use the same `tylina` configuration row and must not be stacked together.
 Custom profiles must contain `@deepseek-ai/dsh-base` and `@deepseek-ai/dsh-web-app` before the Tylina bundle.
@@ -183,4 +183,10 @@ Publishing preserves that existing license; it does not change the core source v
 
 ## Native runtime distribution
 
-The native bundle installs the matching runtime as an optional dependency. macOS, Linux, and Windows ARM64 use versioned npm packages. Windows x64 uses the compiled archive from the fixed `native-v0.4.1` GitHub Release, with its integrity recorded in the lockfile and SHA-256 published alongside the archive. This distribution avoids requiring a source checkout or a Rust toolchain; optional dependencies must remain enabled.
+The native bundle installs the matching runtime as an optional npm dependency. Windows x64 uses
+`npm:@orangex4/tylina-native-win32-x64@0.4.1` under the usual `tylina-native-win32-x64` dependency name.
+All six platforms use npm registry packages and retain pnpm's default subdependency checks.
+Optional dependencies must remain enabled; no source checkout or Rust toolchain is required.
+
+WASM and native bundles can release patches independently; the shared Web assets have their own pinned version.
+CI builds, packs, and verifies both bundles, rejecting URL and local dependencies before publication.

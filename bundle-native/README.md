@@ -28,7 +28,7 @@ The editor uses Better Sidebar tabs when available, or its own resizable sidebar
 Includes templates, fonts loaded on demand, Slides Mode, presenter view, and PDF export.
 Requires Node.js 22.19+ and DeepSeek Harness 0.1.2-rc.1. Install one Tylina edition per profile.
 
-Native runtimes are installed as optional dependencies for macOS, Windows, and Linux on x64/arm64. Windows x64 uses a versioned GitHub Release archive; other platforms use npm packages. Keep optional dependencies enabled; Linux requires glibc.
+Native runtimes are installed as optional dependencies for macOS, Windows, and Linux on x64/arm64. All platforms use versioned npm packages; Windows x64 uses the publisher-scoped package through an npm alias. Keep optional dependencies enabled; Linux requires glibc.
 
 Your Harness provider owns model credentials and conversations. No Tylina account, model proxy, source checkout, or Rust toolchain is required.
 

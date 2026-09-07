@@ -19,7 +19,6 @@ const root = fileURLToPath(new URL('../', import.meta.url))
 const require = createRequire(join(root, 'package.json'))
 const { chromium, expect } = require('@playwright/test')
 const run = promisify(execFile)
-const version = JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).version
 const betterSidebar = process.env.TYLINA_DSH_BETTER_SIDEBAR === '1'
 const modes = process.argv.slice(2).length ? process.argv.slice(2) : ['wasm', 'native']
 const installOptions = process.env.TYLINA_DSH_OFFLINE === '1' ? ['--offline'] : []
@@ -28,6 +27,7 @@ await mkdir(join(root, '.benchmarks'), { recursive: true })
 for (const mode of modes) {
   assert.ok(['wasm', 'native'].includes(mode))
   const packageName = mode === 'wasm' ? 'dsh-tylina' : 'dsh-tylina-native'
+  const version = JSON.parse(await readFile(join(root, `bundle-${mode}/package.json`), 'utf8')).version
   const home = await mkdtemp(join(root, `.benchmarks/dsh-${mode}-`))
   const env = { ...process.env, DSH_HOME: home }
   const project = join(home, 'project')

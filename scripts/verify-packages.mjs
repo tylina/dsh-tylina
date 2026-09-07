@@ -3,8 +3,8 @@ import { readFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import { join } from 'node:path'
-import { root } from '../source.mjs'
-const version = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version
+import { root, assetsRoot } from '../source.mjs'
+const assetsVersion = JSON.parse(readFileSync(join(assetsRoot, 'package.json'), 'utf8')).version
 const release = join(root, 'release')
 const { artifacts } = JSON.parse(readFileSync(join(release, 'manifest.json'), 'utf8'))
 assert.equal(artifacts.length, 2)
@@ -15,14 +15,18 @@ for (const artifact of artifacts) {
   assert.equal(createHash('sha256').update(bytes).digest('hex'), artifact.sha256)
   const names = execFileSync('tar', ['-tzf', archive], { encoding: 'utf8' }).trim().split('\n')
   const manifest = JSON.parse(execFileSync('tar', ['-xOzf', archive, 'package/package.json'], { encoding: 'utf8' }))
-  assert.equal(manifest.version, version)
+  const mode = manifest.name === 'dsh-tylina-native' ? 'native' : 'wasm'
+  const expected = JSON.parse(readFileSync(join(root, `bundle-${mode}/package.json`), 'utf8'))
+  assert.equal(manifest.name, expected.name)
+  assert.equal(manifest.version, expected.version)
   assert.equal(manifest.private, undefined)
-  for (const dependency of Object.values({ ...manifest.dependencies, ...manifest.peerDependencies })) {
+  for (const dependency of Object.values({ ...manifest.dependencies, ...manifest.peerDependencies, ...manifest.optionalDependencies })) {
+    assert.ok(!URL.canParse(dependency) || dependency.startsWith('npm:'), 'Published dependencies must resolve through npm, including optional runtimes')
     assert.ok(!dependency.startsWith('workspace:') && !dependency.startsWith('file:') && !dependency.startsWith('link:'))
   }
   for (const path of ['dist/index.js', 'dist/client.js', 'dist/web/project-window.html', 'cordis.patch.yml']) assert.ok(names.includes(`package/${path}`), path)
   assert.ok(!names.some((path) => path.includes('/node_modules/') || path.startsWith('package/plugin/src/') || path.startsWith('package/.tylina/')))
-  assert.equal(manifest.dependencies['tylina-web-assets'], version)
+  assert.equal(manifest.dependencies['tylina-web-assets'], assetsVersion)
   assert.ok(artifact.bytes < 20 * 1024 * 1024, 'Integration must reuse shared npm resources')
   assert.equal(manifest.os, undefined)
   assert.equal(manifest.cpu, undefined)

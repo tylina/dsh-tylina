@@ -75,8 +75,8 @@ importers:
         specifier: 0.4.1
         version: 0.4.1
       tylina-native-win32-x64:
-        specifier: https://github.com/tylina/tylina-issues/releases/download/native-v0.4.1/tylina-native-win32-x64-0.4.1.tgz
-        version: https://github.com/tylina/tylina-issues/releases/download/native-v0.4.1/tylina-native-win32-x64-0.4.1.tgz
+        specifier: npm:@orangex4/tylina-native-win32-x64@0.4.1
+        version: '@orangex4/tylina-native-win32-x64@0.4.1'
 
   bundle-wasm:
     dependencies:
@@ -1207,6 +1207,11 @@ packages:
     resolution: {integrity: sha512-YhHWdHfpFMQfd0prsEnxKeS3Qz3ytIGmsS0sth4KDjnacIT7hxk6hXHkJ9KysxlkvTM+WZAtQbbcUhdoP4Hvtw==}
     engines: {node: '>=20'}
 
+  '@orangex4/tylina-native-win32-x64@0.4.1':
+    resolution: {integrity: sha512-E7zGKcQaoB4rrHdM4TfP7T7eWx1QF7cOwY9JwE/JR++mi7+qvBOXURvIABOTXqUDPE54uGn1DsZVF2JjA0YXlQ==}
+    cpu: [x64]
+    os: [win32]
+
   '@playwright/test@1.63.0':
     resolution: {integrity: sha512-oxMK4vllB9RK5NQ2l1pq1IfOf2AvnEuj/vYGDj0H2nMtmtZpKtCwt/l00GEO6xjGfpBNAvjovvYdCm50dRQkpQ==}
     engines: {node: '>=20'}
@@ -2146,12 +2151,6 @@ packages:
   tylina-native-win32-arm64@0.4.1:
     resolution: {integrity: sha512-VQa0/kVCvmrvchHDQAT5FgEhMAH57CEryFpX6KTaATNaJMTp1JaRj2rbf78ASqrhN3nYdYtN0NT5RlcZ0ya+rQ==}
     cpu: [arm64]
-    os: [win32]
-
-  tylina-native-win32-x64@https://github.com/tylina/tylina-issues/releases/download/native-v0.4.1/tylina-native-win32-x64-0.4.1.tgz:
-    resolution: {integrity: sha512-w4I63LCGemAO1Gl1NaFUY8ZldqJClpfZgxWpbdkZKJiLJoPeuv/ISyGSbHqZe0pY7sjuf30KGUwt9YGoDPfY6w==, tarball: https://github.com/tylina/tylina-issues/releases/download/native-v0.4.1/tylina-native-win32-x64-0.4.1.tgz}
-    version: 0.4.1
-    cpu: [x64]
     os: [win32]
 
   tylina-sdk@0.4.0:
@@ -3289,6 +3288,9 @@ snapshots:
     dependencies:
       '@modelcontextprotocol/core': 2.0.0
       zod: 4.4.3
+
+  '@orangex4/tylina-native-win32-x64@0.4.1':
+    optional: true
 
   '@playwright/test@1.63.0':
     dependencies:
@@ -4508,9 +4510,6 @@ snapshots:
     optional: true
 
   tylina-native-win32-arm64@0.4.1:
-    optional: true
-
-  tylina-native-win32-x64@https://github.com/tylina/tylina-issues/releases/download/native-v0.4.1/tylina-native-win32-x64-0.4.1.tgz:
     optional: true
 
   tylina-sdk@0.4.0:

@@ -8,6 +8,7 @@ import { SessionId } from '@deepseek-ai/dsh-session/types'
 import { checkWorkspacePath, createNodeWorkspacePool, nativeWorkspacePath, requireWorkspaceRelativePath } from 'tylina-sdk/node'
 import { decodeWorkspace, encodeWorkspace, type WorkspaceWire } from './workspace-wire'
 import { withAgentServices } from './agent-services'
+import { createHarnessFileSystem } from './file-system'
 
 /** A provider-owned process path is usable by Node only with an explicit identity host mapping. */
 export async function resolveHarnessProject(fs: FileSystem, cwd: string, project: string, signal?: AbortSignal): Promise<string> {
@@ -29,16 +30,38 @@ export async function resolveHarnessProject(fs: FileSystem, cwd: string, project
 }
 
 export function createHarnessWorkspaces(ctx: Context, mode: 'wasm' | 'native') {
-  const pool = createNodeWorkspacePool()
-  const resolve = async (sessionId: string, project: string, signal?: AbortSignal) => {
+  const pool = createNodeWorkspacePool({ lazy: mode === 'wasm' })
+  const identify = (sessionId: string, project: string) => {
     if (!sessionId || sessionId.length > 256 || project.length > 2048) throw new Error('Invalid Harness project identity')
-    const result = await ctx.sessionController.resolveAgent(SessionId(sessionId))
+  }
+  const projectFor = async (fs: FileSystem, cwd: string, project: string, signal?: AbortSignal) => {
+    const path = await resolveHarnessProject(fs, cwd, project, signal)
+    const target = await fs.resolve(path, { signal })
+    return { store: await pool.get(path, createHarnessFileSystem(fs, target)), path }
+  }
+  const resolve = async (sessionId: string, project: string, signal?: AbortSignal) => {
+    identify(sessionId, project)
+    const live = ctx.agents?.get(SessionId(sessionId))
+    const result = live ? { agent: live } : await ctx.sessionController.resolveAgent(SessionId(sessionId))
     if ('error' in result) throw new Error(result.error.message)
     signal?.throwIfAborted()
     const { agent } = result
-    const path = await withAgentServices(agent, ['fs'], (context) =>
-      resolveHarnessProject(context.fs, agent.session.header.cwd ?? '', project, signal))
-    return { store: await pool.get(path), agent, path }
+    const owner = await withAgentServices(agent, ['fs'], (context) =>
+      projectFor(context.fs, agent.session.header.cwd ?? '', project, signal))
+    return { ...owner, agent }
+  }
+  const open = async (sessionId: string, project: string, signal?: AbortSignal) => {
+    identify(sessionId, project)
+    const agent = ctx.agents?.get(SessionId(sessionId))
+    if (agent) return withAgentServices(agent, ['fs'], (context) =>
+      projectFor(context.fs, agent.session.header.cwd ?? '', project, signal))
+    // Reading a saved conversation's files is independent of its Agent lifecycle/ownership.
+    const attached = ctx.sessions.get(SessionId(sessionId))
+    const persistence = ctx.get('sessionPersistence') as { inspect(id: string): Promise<{ meta: { cwd?: string } }> } | undefined
+    const header = attached?.header ?? (await persistence?.inspect(sessionId))?.meta
+    if (!header?.cwd) throw new Error('This Harness session has no accessible working directory')
+    signal?.throwIfAborted()
+    return projectFor(ctx.fs, header.cwd, project, signal)
   }
   return {
     resolve,
@@ -55,9 +78,16 @@ export function createHarnessWorkspaces(ctx: Context, mode: 'wasm' | 'native') {
           response.writeHead(403); response.end(); return
         }
         const url = new URL(request.url ?? '/', 'http://localhost')
-        const { store, path } = await resolve(url.searchParams.get('session') ?? '', url.searchParams.get('project') ?? '', abort.signal)
+        const { store, path } = await open(url.searchParams.get('session') ?? '', url.searchParams.get('project') ?? '', abort.signal)
         let result: unknown
         if (request.method === 'GET') {
+          const read = url.searchParams.get('read')
+          if (read !== null) {
+            if (!store.readFile) throw new Error('On-demand files are unavailable for this runtime')
+            const file = await store.readFile(requireWorkspaceRelativePath(read), abort.signal)
+            response.writeHead(file ? 200 : 404, { 'Content-Type': 'application/octet-stream', ...(file && { 'X-Tylina-File-Version': file.version }) })
+            response.end(file ? Buffer.from(file.bytes) : undefined); return
+          }
           const entry = url.searchParams.get('entry')
           let mainFile = url.searchParams.get('main'), activeFile = url.searchParams.get('file')
           if (entry !== null) {
@@ -68,7 +98,7 @@ export function createHarnessWorkspaces(ctx: Context, mode: 'wasm' | 'native') {
             await checkWorkspacePath(path, file)
             mainFile = activeFile = file
           }
-          const snapshot = await store.readIfChanged(request.headers['if-none-match'], { mainFile, activeFile })
+          const snapshot = await store.readIfChanged(request.headers['if-none-match'], { mainFile, activeFile }, abort.signal)
           if (entry !== null && snapshot && !(mainFile! in snapshot.workspace.files)) throw new Error('Document does not exist in this workspace')
           if (!snapshot) { response.writeHead(304); response.end(); return }
           response.setHeader('ETag', `"${snapshot.revision}"`)

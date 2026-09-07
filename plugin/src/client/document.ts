@@ -25,7 +25,7 @@ async function projectRequest(url: URL, init: RequestInit): Promise<Response> {
   return response
 }
 
-export async function prepareHarnessProject(options: { sessionId: string; project: string; entry?: string }): Promise<PreparedProject> {
+export async function prepareHarnessProject(options: { sessionId: string; project: string; entry?: string; signal?: AbortSignal }): Promise<PreparedProject> {
   const url = new URL('/tylina/project', location.href)
   url.searchParams.set('session', options.sessionId)
   if (options.project) url.searchParams.set('project', options.project)
@@ -36,7 +36,7 @@ export async function prepareHarnessProject(options: { sessionId: string; projec
     if (typeof preference?.activeFile === 'string') url.searchParams.set('file', preference.activeFile)
   } catch { /* Navigation preferences are optional, not document storage. */ }
   if (options.entry) url.searchParams.set('entry', options.entry)
-  const initial = await (await projectRequest(url, {})).json() as ProjectSnapshot
+  const initial = await (await projectRequest(url, { signal: options.signal })).json() as ProjectSnapshot
   url.searchParams.delete('entry')
   if (initial.workspace.mainFile) url.searchParams.set('main', initial.workspace.mainFile)
   if (initial.workspace.activeFile) url.searchParams.set('file', initial.workspace.activeFile)
@@ -45,6 +45,7 @@ export async function prepareHarnessProject(options: { sessionId: string; projec
 
 export async function openHarnessDocument(container: HTMLElement, options: {
   sessionId: string; project: string; prepared: PreparedProject; onError(error: Error): void; onOpenAgent(): void | Promise<void>
+  signal?: AbortSignal
 }): Promise<HarnessDocument> {
   const lifetime = new AbortController()
   const { url, initial, preferenceKey } = options.prepared
@@ -54,8 +55,20 @@ export async function openHarnessDocument(container: HTMLElement, options: {
   let closed = false
   let reconnecting: Promise<void> | undefined
   const editor = await createTylinaEditor(container, {
+    signal: options.signal,
     editorUrl: new URL('/tylina/embed.html', location.href), workspace: decodeWorkspace(initial.workspace),
-    workspaceRevision: revision, tools: true, onError: options.onError, onOpenAgent: options.onOpenAgent,
+    workspaceRevision: revision, tools: true,
+    fileSystem: initial.mode === 'wasm' ? { async readFile(path, signal) {
+      const fileUrl = new URL(url); fileUrl.searchParams.set('read', path)
+      const response = await fetch(fileUrl, { credentials: 'same-origin', redirect: 'error', cache: 'no-store',
+        signal: AbortSignal.any([lifetime.signal, ...signal ? [signal] : []]) })
+      if (response.status === 404) return null
+      if (!response.ok) {
+        const body = await response.json().catch(() => null)
+        throw new Error(body?.error ?? `Could not read workspace file (${response.status})`)
+      }
+      return { bytes: new Uint8Array(await response.arrayBuffer()), version: response.headers.get('X-Tylina-File-Version') ?? '' }
+    } } : undefined, onError: options.onError, onOpenAgent: options.onOpenAgent,
     createRuntime: initial.mode === 'native' ? () => createWebSocketRuntime(socketUrl('/tylina/runtime'), options.onError) : undefined,
     async onSave(workspace, context) {
       const response = await projectRequest(url, { method: 'POST', headers: { 'Content-Type': 'application/json' },

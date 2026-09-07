@@ -38,7 +38,8 @@ for (const mode of modes) {
   await access(archive)
   await run('dsh', ['plugin', '--profile', 'tylina', 'add', archive, ...installOptions], { env, maxBuffer: 2 ** 20 })
   if (betterSidebar) {
-    await writeFile(join(home, 'profiles/tylina/pnpm-workspace.yaml'), 'allowBuilds:\n  node-pty: true\n')
+    const configuration = join(home, 'profiles/tylina/pnpm-workspace.yaml')
+    await writeFile(configuration, await readFile(configuration, 'utf8') + '\nallowBuilds:\n  node-pty: true\n')
     await run('dsh', ['plugin', '--profile', 'tylina', 'add', 'dsh-better-sidebar@0.18.0', ...installOptions], { env, maxBuffer: 2 ** 20 })
   }
   const probe = join(home, 'probe')
@@ -55,6 +56,14 @@ for (const mode of modes) {
   const manifest = JSON.parse(await readFile(profile, 'utf8'))
   manifest.dsh.profile.bundles = ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app', packageName, 'tylina-acceptance-probe', ...(betterSidebar ? ['dsh-better-sidebar'] : [])]
   await writeFile(profile, JSON.stringify(manifest, null, 2) + '\n')
+  if (process.env.TYLINA_DSH_WEB_ASSETS) {
+    const configuration = join(home, 'profiles/tylina/pnpm-workspace.yaml')
+    await writeFile(configuration, await readFile(configuration, 'utf8') +
+      `\noverrides:\n  tylina-web-assets: ${JSON.stringify(`file:${process.env.TYLINA_DSH_WEB_ASSETS}`)}\n`)
+    await run('pnpm', ['install', '--no-frozen-lockfile'], { cwd: join(home, 'profiles/tylina'), env, maxBuffer: 2 ** 20 })
+    assert.equal(await readFile(join(home, 'profiles/tylina/node_modules/tylina-web-assets/web/embed.html'), 'utf8'),
+      await readFile(join(process.env.TYLINA_DSH_WEB_ASSETS, 'web/embed.html'), 'utf8'), 'the test must install the candidate Web assets')
+  }
   if (mode === 'native' && process.platform !== 'win32') {
     const runtimeRequire = createRequire(join(home, 'profiles/tylina/node_modules/dsh-tylina-native/package.json'))
     const runtimeRoot = dirname(runtimeRequire.resolve(`tylina-native-${process.platform}-${process.arch}/package.json`))
@@ -90,15 +99,35 @@ for (const mode of modes) {
     page.on('pageerror', (error) => { errors.push(error.message); console.error('Browser error:', error.message) })
     page.on('websocket', (socket) => { if (socket.url().includes('/tylina/runtime')) sockets.push(socket) })
     page.on('websocket', (socket) => { if (new URL(socket.url()).pathname === '/tylina/editor') editorSockets.push(socket) })
+    let openedSession
+    page.on('request', (request) => {
+      const url = new URL(request.url())
+      if (url.pathname === '/tylina/project') openedSession = url.searchParams.get('session')
+    })
     await page.goto(url)
     const continueButton = page.getByRole('button', { name: /^(继续|Continue)$/u })
     await continueButton.click()
     await page.getByRole('button', { name: /^(稍后配置|Set up later|Configure later)$/u }).click()
+    await page.evaluate(async () => {
+      const response = await fetch('/tylina-acceptance', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'bootstrap' }) })
+      if (!response.ok) throw new Error(await response.text())
+    })
+    await page.reload()
+    await page.getByRole('button', { name: /^(稍后配置|Set up later|Configure later)$/u }).click()
+    const revealConversations = page.getByRole('button', { name: /^(打开侧边栏|Open sidebar)$/u })
+    if (await revealConversations.isVisible()) await revealConversations.click()
+    const projectGroup = page.getByRole('treeitem').filter({ has: page.getByText('project', { exact: true }) }).first()
+    if (await projectGroup.getAttribute('aria-expanded') !== 'true') await projectGroup.click()
+    await page.getByText('Conversation A', { exact: true }).click()
+    const firstProject = page.waitForResponse((response) => new URL(response.url()).pathname === '/tylina/project')
+    void firstProject.catch(() => undefined)
     await page.getByRole('button', { name: /^(打开 Tylina|Open Tylina)$/u }).click()
-    await page.getByRole('button', { name: /^(新建 Harness 会话|New Harness session)$/u }).click()
-    await expect(page.locator('.tylina-dsh-project select')).not.toHaveValue('')
-    const sessionId = await page.locator('.tylina-dsh-project select').inputValue()
-    await page.getByRole('button', { name: /^(打开项目|Open project)$/u }).click()
+    const initialProject = await (await firstProject).json()
+    assert.ok((initialProject.workspace.filePaths ?? Object.keys(initialProject.workspace.files)).includes('Plugin.typ'), JSON.stringify(initialProject))
+    await expect(page.locator('.tylina-dsh-panel iframe')).toBeVisible({ timeout: 30_000 })
+    const sessionId = openedSession
+    assert.ok(sessionId)
     const iframe = page.locator('.tylina-dsh-panel iframe')
     const frame = await iframe.contentFrame()
     const menu = async (group, item) => {
@@ -192,7 +221,6 @@ for (const mode of modes) {
     }
     // Better Sidebar restores its open tab on reload; the ordinary dock starts closed.
     if (await launcher.getAttribute('aria-expanded') !== 'true') await launcher.click()
-    await page.getByRole('button', { name: /^(打开项目|Open project)$/u }).click()
     await expect.poll(readMain).toBe(external)
     await expect(frame.locator('.typst-doc')).toBeVisible()
     await expect(frame.locator('.web-document-title')).toHaveText('project')

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { once } from 'node:events'
-import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile, symlink, truncate } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
@@ -28,7 +28,10 @@ async function setup(t) {
   await agentOwner
   const agent = { ctx: agentOwner.ctx, session: { header: { cwd: directory } } }
   // Only the session controller boundary is substituted; paths and storage use the released backend and real disk.
-  const projects = createHarnessWorkspaces({ sessionController: { async resolveAgent(id) {
+  let routed = 0
+  const projects = createHarnessWorkspaces({ fs: ctx.fs, sessions: { get(id) { return ['owner', 'cold-child'].includes(id) ? agent.session : undefined } }, get() { return undefined },
+    agents: { get(id) { return id === 'child' ? agent : undefined } }, sessionController: { async resolveAgent(id) {
+    routed++
     return id === 'owner' ? { agent } : { error: { message: 'Unknown session' } }
   } } }, 'wasm')
   const server = createServer((req, res) => { void projects.handle(req, res) })
@@ -37,7 +40,7 @@ async function setup(t) {
   t.after(async () => { await projects.dispose(); await new Promise((resolve) => server.close(resolve)); await ctx.fiber.dispose(); await rm(directory, { recursive: true, force: true }) })
   await mkdir(join(directory, 'paper'))
   await writeFile(join(directory, 'paper', 'main.typ'), '\uFEFF= 原文\r\n')
-  return { ctx, directory, url }
+  return { ctx, directory, url, routed: () => routed }
 }
 
 test('released Harness filesystem maps a selected project into versioned source/resource HTTP storage', async (t) => {
@@ -46,10 +49,12 @@ test('released Harness filesystem maps a selected project into versioned source/
   assert.equal(initial.status, 200)
   const first = await initial.json()
   assert.equal(first.workspace.mainFile, null)
-  assert.deepEqual(first.workspace.files, { 'main.typ': '\uFEFF= 原文\r\n' })
+  assert.deepEqual(first.workspace.files, {})
+  assert.deepEqual(first.workspace.filePaths, ['main.typ'])
   assert.equal((await fetch(url, { headers: { 'If-None-Match': initial.headers.get('etag') } })).status, 304)
   const desired = structuredClone(first.workspace)
-  desired.files['main.typ'] += '\r\nChanged'
+  const fileUrl = new URL(url); fileUrl.searchParams.set('read', 'main.typ')
+  desired.files['main.typ'] = await (await fetch(fileUrl)).text() + '\r\nChanged'
   desired.resources['figure.png'] = Buffer.from([137, 80, 78, 71, 0, 255]).toString('base64')
   const init = { method: 'POST', headers: { Origin: url.origin, 'Content-Type': 'application/json' },
     body: JSON.stringify({ workspace: desired, revision: first.revision }) }
@@ -96,4 +101,28 @@ test('file viewer entry paths open the exact Typst main inside the admitted proj
     url.searchParams.set('entry', entry)
     assert.equal((await fetch(url)).status, 400)
   }
+})
+
+
+test('an active child session opens a large filesystem through its existing scope without session routing', async (t) => {
+  const { directory, url, routed } = await setup(t)
+  await mkdir(join(directory, 'paper', '.agents'))
+  await symlink(directory, join(directory, 'paper', '.agents', 'skills'))
+  await writeFile(join(directory, 'paper', 'unrelated.bin'), '')
+  await truncate(join(directory, 'paper', 'unrelated.bin'), 256 * 1024 * 1024)
+  url.searchParams.set('session', 'child'); url.searchParams.set('entry', 'main.typ')
+  const response = await fetch(url)
+  assert.equal(response.status, 200)
+  const result = await response.json()
+  assert.deepEqual(Object.keys(result.workspace.files), ['main.typ'])
+  assert.deepEqual(result.workspace.resources, {})
+  assert.ok(result.workspace.filePaths.includes('unrelated.bin'))
+  assert.equal(routed(), 0, 'file access must not resume or adopt a live child session')
+  const cold = new URL(url); cold.searchParams.set('session', 'cold-child')
+  assert.equal((await fetch(cold)).status, 200)
+  assert.equal(routed(), 0, 'reading a cold child workspace must not activate its Agent')
+  url.searchParams.delete('entry'); url.searchParams.set('read', 'main.typ')
+  assert.equal((await fetch(url)).status, 200)
+  url.searchParams.set('read', '../outside.typ')
+  assert.equal((await fetch(url)).status, 400)
 })

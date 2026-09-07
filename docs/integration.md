@@ -14,13 +14,16 @@ The editor's source, resources, history, menus and persistence use the existing 
 The default right panel sits beside the conversation and can be resized with the pointer or keyboard.
 Hiding the panel preserves its editing session, Undo and Agent tools. Narrow windows show one surface at a time.
 
-Open Tylina, choose or create a Harness conversation, and open its working directory or a project within it.
+Open Tylina to enter the current conversation’s working directory automatically.
+The folder button is an optional way to select a project subfolder; there is no initial project picker for an active conversation.
 The file list opens first when no main file has been selected; double-click the document to use as main.
 Source edits save to the actual Harness project in both variants. External script and filesystem edits appear
 through the editor's normal conflict handling and Undo. The project remains bound to the selected conversation
-while editing. The dock follows conversation changes after saving the current document; save failures retain
-the current editor and show the problem. API-created sessions receive the Workspace registration that Harness's
-chat composer requires, using the same existing session identity and actual working directory.
+while editing. By default the dock follows conversation changes after saving the current document.
+Pin the workspace to keep it open while browsing other conversations; unpin to resume following immediately.
+Save failures retain the current editor and show the problem. Obsolete opening requests are cancelled.
+File access reads the actual session working directory without creating, resuming or adopting an Agent,
+including sessions owned by subagent routing. Tools bind separately to the owning Agent.
 “Focus this conversation” keeps the document running while showing its chat.
 “Open in separate window” saves before handing the project and exclusive tools to a standalone window.
 A blocked popup or failed save keeps the current editor. “Return to sidebar” saves and hands the project back.
@@ -58,11 +61,11 @@ Each native runtime manifest restricts installation to its actual OS and archite
 Install **one** variant into an existing Web profile:
 
 ```sh
-dsh plugin --profile web add /absolute/path/dsh-tylina-0.4.1.tgz
+dsh plugin --profile web add /absolute/path/dsh-tylina-0.4.2.tgz
 dsh --profile web
 ```
 
-For native compilation, install `dsh-tylina-native-0.4.2.tgz` instead.
+For native compilation, install `dsh-tylina-native-0.4.3.tgz` instead.
 Remove the previous variant with `dsh plugin --profile web remove dsh-tylina` before switching.
 The bundles use the same `tylina` configuration row and must not be stacked together.
 Custom profiles must contain `@deepseek-ai/dsh-base` and `@deepseek-ai/dsh-web-app` before the Tylina bundle.
@@ -81,8 +84,15 @@ editor capabilities as local Workers. These implementations are supplied by npm,
 
 Harness project access uses the selected Agent's filesystem provider and requires an explicit host-directory
 mapping. No provider target keys are parsed as native paths. Snapshots preserve text encodings and binary bytes;
-project-owned symlinks and special files are rejected. VCS metadata and dependency directories are excluded.
-The limits are 4096 files, 64 MiB per file and 128 MiB per workspace. Choose a smaller document subdirectory when needed.
+directory enumeration skips symlinks and special files. VCS metadata and dependency directories are excluded.
+The WASM variant indexes directory metadata and reads requested bytes through Harness `fs.readBytes`.
+Opening a project does not import unrelated binary files; Typst requests computed dependencies as needed.
+The browser working set is bounded to 4096 loaded files, 64 MiB per file and 128 MiB total.
+The metadata index allows up to 100,000 entries. Saving preserves indexed files whose bytes were never loaded.
+Explicit folder moves and downloads load their requested scope first and fail clearly if it exceeds the working set.
+The native variant currently transfers complete snapshots and retains the 4096-file/128-MiB project limit.
+For another host, implement the public [SDK workspace filesystem](https://www.npmjs.com/package/tylina-sdk):
+`stat`, `readDirectory`, `readFile`, opaque versions and cancellation. Host persistence is a separate versioned callback.
 Saving checks the previous content revision, publishes each file atomically and attempts guarded rollback if a
 later write fails. This is not a filesystem-wide transaction. An uncertain or conflicting write remains an error
 until the current disk contents are inspected and reconciled; it is never silently replayed.

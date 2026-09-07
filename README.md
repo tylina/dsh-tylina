@@ -27,14 +27,15 @@ Update:
 dsh plugin --profile web update dsh-tylina@latest
 ```
 
-Click **Tylina** → choose or create a Harness conversation → open its project → double-click the main `.typ` file.
-The document opens beside your conversation. The header also offers a separate window.
+Click **Tylina** to open the current conversation’s workspace automatically. Double-click a `.typ` file,
+or ask your agent to set the main document. Switch conversations and the editor follows; pin it to stay in one workspace.
+WASM reads only requested files, including Typst dependencies. The header also offers a separate window.
 With Better Sidebar installed, Tylina joins its tabs; otherwise it provides its own resizable sidebar.
 
 <details>
 <summary><strong>Native edition, requirements, and switching</strong></summary>
 
-The WASM edition is **0.4.1**; the native edition is **0.4.2**. Choose browser WASM or native compilation on the Harness host.
+The WASM edition is **0.4.2**; the native edition is **0.4.3**. Choose browser WASM or native compilation on the Harness host.
 
 | Package | Compilation runs in | Choose it for |
 | --- | --- | --- |
@@ -77,6 +78,6 @@ Start with a template, then shape it through conversation and direct editing. Th
 Documents remain standard `.typ` source and resources that you can edit locally. Model requests use your configured
 Harness provider. Tylina requires no account and adds no model proxy server.
 
-[Development & builds](docs/integration.md#build-and-install) · [Connect MCP clients](docs/integration.md#mcp-clients) · [Report an issue](https://github.com/tylina/dsh-tylina/issues)
+[Embed elsewhere with the SDK](https://www.npmjs.com/package/tylina-sdk) · [Development & builds](docs/integration.md#build-and-install) · [Connect MCP clients](docs/integration.md#mcp-clients) · [Report an issue](https://github.com/tylina/dsh-tylina/issues)
 
 <sub>Tylina is proprietary software. This repository provides the Harness integration; the core is distributed as compiled npm dependencies. Third-party templates and fonts retain their own licenses.</sub>

@@ -19,7 +19,7 @@ export interface Config {
   sidecar?: LspProcessOptions
   languageServer?: LspProcessOptions
 }
-export const inject = ['webServer', 'connection', 'skills', 'sessionController', 'tools', 'attachments', 'fs']
+export const inject = ['webServer', 'connection', 'skills', 'sessionController', 'agents', 'sessions', 'sessionPersistence', 'tools', 'attachments', 'fs']
 
 export async function apply(ctx: Context, config: Config = {}): Promise<void> {
   const mode = config.mode ?? 'wasm'

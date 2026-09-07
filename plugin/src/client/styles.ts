@@ -22,6 +22,9 @@ body[data-tylina-docked] { width:calc(100% - var(--tylina-dock-width)); }
 .tylina-dsh-session { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; opacity:.6; }
 .tylina-dsh-bar button, .tylina-dsh-error button { display:grid; place-items:center; flex:none; width:26px; height:26px;
   padding:0; border:0; border-radius:4px; background:transparent; color:inherit; cursor:pointer; font:inherit; }
+.tylina-dsh-bar button[aria-pressed=true] { background:var(--dsw-alias-bg-overlay,#e7edf7); color:var(--dsw-alias-text-link,#3468a8); }
+.tylina-dsh-retry { align-self:flex-start; margin:8px 16px; padding:6px 10px; border:1px solid var(--dsw-alias-border-l2,#ddd); border-radius:6px; background:transparent; color:inherit; font:inherit; }
+.tylina-dsh-loading { padding:16px; font-size:13px; color:var(--dsw-alias-label-secondary,#697080); }
 .tylina-dsh-bar button:hover, .tylina-dsh-error button:hover { background:var(--dsw-alias-bg-overlay,#f0f1f3); }
 .tylina-dsh-panel button:disabled { opacity:.4; cursor:default; }
 .tylina-dsh-panel :focus-visible { outline:2px solid #5c83ba; outline-offset:1px; }

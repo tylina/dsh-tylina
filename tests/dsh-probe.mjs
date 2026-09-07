@@ -1,7 +1,7 @@
 /** Installed only by dsh-bundles.mjs in its isolated, loopback acceptance profile. */
 import { createUserMessage } from '@deepseek-ai/dsh-llm/message'
 import { createModelFixture } from './dsh-model-fixture.mjs'
-export const inject = ['webServer', 'connection', 'sessionController', 'tools', 'llm']
+export const inject = ['webServer', 'connection', 'sessionController', 'workspaceController', 'tools', 'llm']
 export function apply(ctx) {
   let sequence = 0
   const model = createModelFixture(ctx)
@@ -13,6 +13,16 @@ export function apply(ctx) {
       let raw = ''
       for await (const chunk of request) { raw += chunk; if (raw.length > 1024 * 1024) throw new Error('Request too large') }
       const input = JSON.parse(raw)
+      if (input.action === 'bootstrap') {
+        const { workspace } = await ctx.workspaceController.create({ path: process.cwd() })
+        const created = await ctx.sessionController.create({ workspaceId: workspace.workspaceId })
+        await ctx.sessionController.rename({ sessionId: created.sessionId, title: 'Conversation A' })
+        const owner = await ctx.sessionController.resolveAgent(created.sessionId)
+        if ('error' in owner) throw new Error(owner.error.message)
+        owner.agent.session.append('turn/start', { turn: 1 })
+        owner.agent.session.append('turn/end', { turn: 1, reason: { kind: 'completed' } })
+        response.writeHead(200, { 'Content-Type': 'application/json' }); response.end(JSON.stringify(created)); return
+      }
       const result = await ctx.sessionController.resolveAgent(input.sessionId)
       if ('error' in result) throw new Error(result.error.message)
       const { agent } = result

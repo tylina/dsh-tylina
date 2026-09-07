@@ -13,11 +13,10 @@ interface Props {
   onProject(value: string): void
   onOpen(): void
   onCancel(): void
-  onCreate(): void
 }
 
 export function ProjectPicker({ t, sessions, selectedId, project, busy, canCancel,
-  onSelect, onProject, onOpen, onCancel, onCreate }: Props) {
+  onSelect, onProject, onOpen, onCancel }: Props) {
   const [advanced, setAdvanced] = useState(Boolean(project))
   const cwd = sessions.find((session) => session.id === selectedId)?.cwd
   return <form className="tylina-dsh-project" onSubmit={(event) => { event.preventDefault(); onOpen() }}>
@@ -55,9 +54,7 @@ export function ProjectPicker({ t, sessions, selectedId, project, busy, canCance
         </button>
       </div>
     </> : <div className="tylina-dsh-empty-project">
-      <p>{t('noSession')}</p><button type="button" className="tylina-dsh-primary" disabled={busy} onClick={onCreate}>
-        {t('create')}<IconArrowRight size={16} aria-hidden="true" />
-      </button>
+      <p>{t('noSession')}</p>
     </div>}
     <div className="tylina-dsh-project-footer"><a href="/tylina/" target="_blank" rel="noopener noreferrer">
       <IconBrowser size={15} aria-hidden="true" />{t('drafts')}<IconExternalLink size={13} aria-hidden="true" />

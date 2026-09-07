@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
-import { IconFolder, IconRefresh, IconMessageCircle, IconExternalLink, IconX } from '@tabler/icons-react'
+import { IconFolder, IconRefresh, IconMessageCircle, IconExternalLink, IconPin, IconPinnedOff, IconX } from '@tabler/icons-react'
 import type { Context } from '@deepseek-ai/cordis'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
@@ -19,7 +19,6 @@ import { DockResize, useDocumentDock } from './dock'
 import { createProjectWindow, type ProjectWindow } from './popout'
 import { attachProjectLauncher, type ProjectLauncherOptions } from './window-launcher'
 import { readProjectWindow } from './window-record'
-import { ensureHarnessWorkspace } from './workspace'
 import { McpConnectionButton } from './mcp-connection'
 import { useToolReconnect } from './use-tool-reconnect'
 
@@ -35,6 +34,7 @@ function EditorAction({ ctx, wide, t, integration }: Props) {
   integration.openLabel = () => t('open')
   const currentDocument = useRef<HarnessDocument | undefined>(undefined)
   const alive = useRef(true), opening = useRef(false)
+  const openingRequest = useRef<{ sessionId: string; follow: boolean; abort: AbortController }>()
   const sessions = useSyncExternalStore(ctx.sessions.list.subscribe, ctx.sessions.list.getSnapshot)
   const shown = sidebar.embedded ? sidebar.visible : visible && (!sidebar.available || !sessions.ids.length)
   const dock = useDocumentDock(shown && !sidebar.embedded)
@@ -42,12 +42,23 @@ function EditorAction({ ctx, wide, t, integration }: Props) {
   const [selection, setSelection] = useState<Project | undefined>()
   const [selectedId, setSelectedId] = useState<SessionId | ''>('')
   const [project, setProject] = useState('')
+  const [pinned, setPinned] = useState(false)
+  const [choosing, setChoosing] = useState(false)
+  const activeSession = sessions.current ?? sidebar.sessionId
+  const following = useRef({ session: activeSession, pinned })
+  following.current = { session: activeSession, pinned }
+  useEffect(() => {
+    const request = openingRequest.current
+    if (request?.follow && (pinned || activeSession !== request.sessionId)) request.abort.abort()
+  }, [activeSession, pinned])
   useEffect(() => { if (!selection && sidebar.sessionId) setSelectedId(sidebar.sessionId as SessionId) }, [selection, sidebar.sessionId])
   const [changing, setChanging] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()
   const followedSession = useRef<SessionId | null>(null)
-  useEffect(() => { alive.current = true; return () => { alive.current = false; currentDocument.current?.dispose(); floating.current?.dispose() } }, [])
+  const pendingEntry = useRef<Project>()
+  const [entryIntent, setEntryIntent] = useState(0)
+  useEffect(() => { alive.current = true; return () => { alive.current = false; openingRequest.current?.abort.abort(); currentDocument.current?.dispose(); floating.current?.dispose() } }, [])
   const report = (error: Error) => { if (alive.current) setError(error.message) }
   const toolConnection = useToolReconnect(() => currentDocument.current, report)
   const show = () => {
@@ -63,45 +74,57 @@ function EditorAction({ ctx, wide, t, integration }: Props) {
   }
   const hide = () => { integration.hide(); setVisible(false); requestAnimationFrame(() => launcher.current?.focus()) }
   const focusChat = (id: SessionId) => { ctx.sessions.open(id); if (window.innerWidth < 900) hide() }
-  const open = async (next: Project = { sessionId: selectedId as SessionId, project: project.trim() }, selectConversation = true) => {
+  const open = async (next: Project = { sessionId: selectedId as SessionId, project: project.trim() }, selectConversation = true, follow = false) => {
     if (opening.current || !container.current || !next.sessionId || !ctx.sessions.list.getSnapshot().byId[next.sessionId]) return new Error(t('noSession'))
+    const stillWanted = () => !follow || (!following.current.pinned && following.current.session === next.sessionId)
+    const request = { sessionId: next.sessionId, follow, abort: new AbortController() }
+    openingRequest.current = request
     opening.current = true; setBusy(true); setError(undefined)
     try {
       if (currentDocument.current && !await currentDocument.current.editor.save()) throw new Error(t('saveFailed'))
-      await ensureHarnessWorkspace(ctx, next.sessionId)
-      const prepared = await prepareHarnessProject(next)
-      if (!alive.current) return
+      const prepared = await prepareHarnessProject({ ...next, signal: request.abort.signal })
+      if (!alive.current || !stillWanted()) return
+      if (currentDocument.current && !await currentDocument.current.editor.save()) throw new Error(t('saveFailed'))
+      if (!alive.current || !stillWanted()) return
       currentDocument.current?.dispose(); currentDocument.current = undefined; setSelection(undefined)
-      const editor = await openHarnessDocument(container.current, { ...next, prepared, onError: report,
+      const editor = await openHarnessDocument(container.current, { ...next, prepared, signal: request.abort.signal, onError: report,
         onOpenAgent() {
           if (!alive.current || !ctx.sessions.list.getSnapshot().byId[next.sessionId]) throw new Error(t('noSession'))
           focusChat(next.sessionId)
         }
       })
-      if (!alive.current) { editor.dispose(); return }
-      currentDocument.current = editor; setSelection(next); setChanging(false)
+      if (!alive.current || !stillWanted()) { editor.dispose(); return }
+      currentDocument.current = editor; setSelection(next); setChanging(false); setChoosing(false)
       if (selectConversation) ctx.sessions.open(next.sessionId)
     } catch (error) {
       const failure = error instanceof Error ? error : new Error(String(error))
-      report(failure); return failure
+      if (stillWanted()) { report(failure); setChanging(!currentDocument.current) }
+      return failure
     }
-    finally { opening.current = false; if (alive.current) setBusy(false) }
+    finally { if (openingRequest.current === request) openingRequest.current = undefined; opening.current = false; if (alive.current) setBusy(false) }
   }
   integration.onFileOpen = (sessionId, entry) => {
     const id = sessionId as SessionId
     if (floating.current) { floating.current.focus(); return }
     ctx.sessions.open(id); integration.open(id); setVisible(true)
-    void open({ sessionId: id, project: '', entry }, false)
+    pendingEntry.current = { sessionId: id, project: '', entry }
+    setEntryIntent((value) => value + 1)
+    setSelectedId(id)
   }
   useEffect(() => {
-    const id = (sidebar.sessionId as SessionId | undefined) ?? sessions.current
-    if (!selection || !id || busy || changing || floating.current) return
-    if (id === selection.sessionId) { followedSession.current = null; return }
+    const id = activeSession as SessionId | undefined
+    if (!id || busy || floating.current) return
+    if (pendingEntry.current) {
+      const next = pendingEntry.current; pendingEntry.current = undefined
+      if (next.sessionId === id) { void open(next, false); return }
+    }
+    if (pinned || choosing || (!selection && !shown)) return
+    if (id === selection?.sessionId) { followedSession.current = null; return }
     if (followedSession.current === id) return
     followedSession.current = id
-    setSelectedId(id); setProject(''); setChanging(true)
-    void open({ sessionId: id, project: '' }, false)
-  }, [sessions.current, sidebar.sessionId, selection, busy, changing])
+    setSelectedId(id); setProject('')
+    void open({ sessionId: id, project: '' }, false, true)
+  }, [activeSession, selection, pinned, busy, choosing, shown, selectedId, entryIntent])
   const launcherOptions: ProjectLauncherOptions = { t, onError: report,
     async restore(project) {
       await ctx.sessions.refresh()
@@ -161,11 +184,15 @@ function EditorAction({ ctx, wide, t, integration }: Props) {
           {!sidebar.embedded && selection && (sessions.byId[selection.sessionId]?.displayTitle ?? selection.sessionId)}
         </span>
         {selection && <>
+          <button type="button" title={t(pinned ? 'unpin' : 'pin')} aria-label={t(pinned ? 'unpin' : 'pin')}
+            aria-pressed={pinned} disabled={busy} onClick={() => { followedSession.current = null; setPinned(!pinned) }}>
+            {pinned ? <IconPinnedOff size={16} /> : <IconPin size={16} />}
+          </button>
           <McpConnectionButton getDocument={() => currentDocument.current} t={t} disabled={busy || changing || toolConnection.busy} />
           <button type="button" title={t('change')} aria-label={t('change')} disabled={busy}
             onClick={() => {
               void ctx.sessions.refresh().catch(report)
-              setSelectedId(selection.sessionId); setProject(selection.project); setChanging(true)
+              setSelectedId(selection.sessionId); setProject(selection.project); setChoosing(true); setChanging(true)
             }}><IconFolder size={16} /></button>
           <button type="button" title={t(toolConnection.busy ? 'reconnecting' : 'retry')}
             aria-label={t(toolConnection.busy ? 'reconnecting' : 'retry')} aria-busy={toolConnection.busy}
@@ -180,12 +207,15 @@ function EditorAction({ ctx, wide, t, integration }: Props) {
       </div>
       {error && <div className="tylina-dsh-error" role="alert"><span>{error}</span>
         <button type="button" aria-label={t('dismiss')} onClick={() => setError(undefined)}><IconX size={16} /></button></div>}
-      {changing && <ProjectPicker key={selection?.sessionId ?? 'initial'} t={t}
+      {busy && !selection && <p className="tylina-dsh-loading" role="status">{t('loading')}</p>}
+      {!activeSession && !choosing && <p className="tylina-dsh-loading">{t('noSession')}</p>}
+      {changing && !busy && choosing && <ProjectPicker key={selection?.sessionId ?? 'initial'} t={t}
         sessions={sessions.ids.map((id) => ({ id, title: sessions.byId[id]?.displayTitle ?? id, cwd: sessions.byId[id]?.cwd }))}
         selectedId={selectedId} project={project} busy={busy} canCancel={Boolean(selection)}
         onSelect={(id) => setSelectedId(id as SessionId)} onProject={setProject}
-        onOpen={() => { void open() }} onCancel={() => setChanging(false)}
-        onCreate={() => { void ctx.sessions.create({}).then((id) => { setSelectedId(id); ctx.sessions.open(id); if (sidebar.available) integration.open(id) }).catch(report) }} />}
+        onOpen={() => { void open() }} onCancel={() => { setChoosing(false); setChanging(false) }} />}
+      {changing && !busy && !choosing && activeSession && error && <button type="button" className="tylina-dsh-retry"
+        onClick={() => { followedSession.current = null; void open({ sessionId: activeSession as SessionId, project: '' }, false, true) }}>{t('retryOpen')}</button>}
       <div ref={container} className="tylina-dsh-editor" hidden={changing} />
     </aside>, integration.surface)}
   </>

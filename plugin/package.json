@@ -1,6 +1,6 @@
 {
   "name": "@tylina/dsh-plugin",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "type": "module",
   "description": "Tylina document editor for DeepSeek Harness",
   "license": "UNLICENSED",
@@ -50,8 +50,8 @@
     "esbuild": "^0.25.0",
     "react": "^18.3.1",
     "react-dom": "18.3.1",
-    "tylina-sdk": "0.4.0",
-    "tylina-web-assets": "0.4.1",
+    "tylina-sdk": "0.4.1",
+    "tylina-web-assets": "0.4.2",
     "typescript": "^6.0.3"
   },
   "private": true,

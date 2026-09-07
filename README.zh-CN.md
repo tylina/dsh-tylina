@@ -35,7 +35,7 @@ dsh plugin --profile web update dsh-tylina@latest
 <details>
 <summary><strong>原生版、环境要求与切换方式</strong></summary>
 
-两种版本均已发布 **0.4.1**，可以选择浏览器 WASM 或 Harness 主机上的原生编译。
+WASM 版为 **0.4.1**，原生版为 **0.4.2**。可以选择浏览器 WASM 或 Harness 主机上的原生编译。
 
 | 包 | 编译在哪里运行 | 适合 |
 | --- | --- | --- |

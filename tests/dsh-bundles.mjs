@@ -210,7 +210,13 @@ for (const mode of modes) {
     assert.ok(formatted.includes('\r\n'))
     await menu('Edit', 'Undo'); await expect.poll(readMain).toBe(source)
     await menu('Edit', 'Redo'); await expect.poll(readMain).toBe(formatted)
-    await frame.getByRole('button', { name: 'Split', exact: true }).click()
+    const viewReply = await probeRequest({ name: 'tylina', input: { command: 'view.state' } })
+    assert.equal(viewReply.isError, false, JSON.stringify(viewReply))
+    const viewState = viewReply.value.structuredContent
+    assert.equal(typeof viewState.workspace, 'boolean')
+    const splitView = await probeRequest({ name: 'tylina', input: { command: 'view.set', args: { target: 'mode', value: 'split' } } })
+    assert.equal(splitView.isError, false)
+    assert.equal(splitView.value.structuredContent.mode, 'split')
     await frame.getByTestId('monaco-source-editor').click({ position: { x: 180, y: 12 } })
     await page.keyboard.press('ControlOrMeta+a')
     const selection = (await probeRequest({ name: 'tylina', input: { command: 'editor.state' } })).value.structuredContent

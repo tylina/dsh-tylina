@@ -1,9 +1,6 @@
 name: Check
+# Ordinary changes are verified locally; this workflow is available on demand.
 on:
-  push:
-    paths-ignore: ['**/*.md', 'docs/**']
-  pull_request:
-    paths-ignore: ['**/*.md', 'docs/**']
   workflow_dispatch:
 permissions:
   contents: read

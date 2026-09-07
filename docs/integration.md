@@ -189,4 +189,5 @@ All six platforms use npm registry packages and retain pnpm's default subdepende
 Optional dependencies must remain enabled; no source checkout or Rust toolchain is required.
 
 WASM and native bundles can release patches independently; the shared Web assets have their own pinned version.
-CI builds, packs, and verifies both bundles, rejecting URL and local dependencies before publication.
+Local release checks build, pack, and verify both bundles, rejecting URL and local dependencies before publication.
+The Check workflow is manual only; ordinary pushes and documentation edits do not consume CI runners.

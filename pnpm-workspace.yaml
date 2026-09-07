@@ -1,0 +1,27 @@
+packages:
+  - plugin
+  - bundle-*
+  - .tylina/packages/*
+  - .tylina/apps/web
+
+overrides:
+  esbuild: 0.28.1
+  '@types/hast': 3.0.4
+
+onlyBuiltDependencies:
+  - electron
+  - electron-winstaller
+  - esbuild
+  - node-pty
+allowBuilds:
+  electron-winstaller: true
+  esbuild: true
+  koffi: false
+  node-pty: true
+  protobufjs: false
+minimumReleaseAgeExclude:
+  - '@playwright/test@1.63.0'
+  - playwright-core@1.63.0
+  - playwright@1.63.0
+patchedDependencies:
+  monaco-editor@0.55.1: .tylina/patches/monaco-editor@0.55.1.patch

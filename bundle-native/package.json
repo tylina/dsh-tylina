@@ -1,0 +1,68 @@
+{
+  "name": "@tylina/dsh-native",
+  "version": "0.4.0",
+  "type": "module",
+  "license": "UNLICENSED",
+  "description": "Tylina native runtime bundle for DeepSeek Harness",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": "./dist/index.js",
+    "./client": "./dist/client.js"
+  },
+  "files": [
+    "cordis.patch.yml",
+    "dist",
+    "runtime"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-renderer",
+        "@deepseek-ai/dsh-client-ui-sidebar",
+        "@deepseek-ai/dsh-api-session-controller",
+        "@deepseek-ai/dsh-api-workspace-controller"
+      ]
+    }
+  },
+  "dependencies": {
+    "@deepseek-ai/dsh-session": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-llm": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-skill-filesystem": "0.1.2-rc.1",
+    "ws": "^8.18.3"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "bundle": "node ../build.mjs native"
+  },
+  "devDependencies": {
+    "@tylina/dsh-plugin": "workspace:*",
+    "@types/node": "^26.1.0",
+    "typescript": "^6.0.3"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.2"
+  },
+  "publishConfig": {
+    "executableFiles": [
+      "runtime/tinymist",
+      "runtime/tylina-tinymist"
+    ],
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tylina/dsh-tylina.git",
+    "directory": "bundle-native"
+  },
+  "bugs": {
+    "url": "https://github.com/tylina/dsh-tylina/issues"
+  },
+  "homepage": "https://github.com/tylina/dsh-tylina#readme"
+}

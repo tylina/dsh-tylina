@@ -1,0 +1,222 @@
+import assert from 'node:assert/strict'
+import { spawn, execFile } from 'node:child_process'
+import { once } from 'node:events'
+import { access, cp, mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises'
+import { constants } from 'node:fs'
+import { createRequire } from 'node:module'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { promisify } from 'node:util'
+
+import { verifyDock } from './dsh-dock.mjs'
+import { verifySessionFollowing } from './dsh-session-follow.mjs'
+import { verifyInstalledMcp } from './dsh-mcp-installed.mjs'
+import { verifyWindowRecovery } from './dsh-window-recovery.mjs'
+import { verifyToolReconnect } from './dsh-tool-reconnect.mjs'
+
+const root = fileURLToPath(new URL('../', import.meta.url))
+const require = createRequire(join(root, 'package.json'))
+const { chromium, expect } = require('@playwright/test')
+const run = promisify(execFile)
+const version = JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).version
+const modes = process.argv.slice(2).length ? process.argv.slice(2) : ['wasm', 'native']
+const installOptions = process.env.TYLINA_DSH_OFFLINE === '1' ? ['--offline'] : []
+await mkdir(join(root, '.benchmarks'), { recursive: true })
+
+for (const mode of modes) {
+  assert.ok(['wasm', 'native'].includes(mode))
+  const home = await mkdtemp(join(root, `.benchmarks/dsh-${mode}-`))
+  const env = { ...process.env, DSH_HOME: home }
+  const project = join(home, 'project')
+  await mkdir(project)
+  const source = '#let title="Tylina in dsh"\r\n= #title\r\n\r\nHello 世界'
+  await writeFile(join(project, 'Plugin.typ'), source)
+  const archive = join(root, `release/tylina-dsh-${mode}-${version}.tgz`)
+  await access(archive)
+  await run('dsh', ['plugin', '--profile', 'tylina', 'add', archive, ...installOptions], { env, maxBuffer: 2 ** 20 })
+  const probe = join(home, 'probe')
+  await mkdir(probe)
+  await cp(join(root, 'tests/dsh-probe.mjs'), join(probe, 'index.mjs'))
+  await cp(join(root, 'tests/dsh-model-fixture.mjs'), join(probe, 'dsh-model-fixture.mjs'))
+  await writeFile(join(probe, 'package.json'), JSON.stringify({ name: 'tylina-acceptance-probe', version: '1.0.0', type: 'module',
+    dependencies: { '@deepseek-ai/dsh-llm': '0.1.2-rc.1' },
+    exports: './index.mjs', dsh: { bundle: { patch: './cordis.patch.yml' } } }))
+  await writeFile(join(probe, 'cordis.patch.yml'), '- insert:\n    - id: tylina-acceptance\n      name: tylina-acceptance-probe\n')
+  await run('pnpm', ['pack', '--pack-destination', home], { cwd: probe, env, maxBuffer: 2 ** 20 })
+  await run('dsh', ['plugin', '--profile', 'tylina', 'add', join(home, 'tylina-acceptance-probe-1.0.0.tgz'), ...installOptions], { env, maxBuffer: 2 ** 20 })
+  const profile = join(home, 'profiles/tylina/package.json')
+  const manifest = JSON.parse(await readFile(profile, 'utf8'))
+  manifest.dsh.profile.bundles = ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app', `@tylina/dsh-${mode}`, 'tylina-acceptance-probe']
+  await writeFile(profile, JSON.stringify(manifest, null, 2) + '\n')
+  if (mode === 'native' && process.platform !== 'win32') {
+    for (const name of ['tinymist', 'tylina-tinymist']) {
+      await access(join(home, `profiles/tylina/node_modules/@tylina/dsh-native/runtime/${name}`), constants.X_OK)
+    }
+  }
+  const server = spawn('dsh', ['--profile', 'tylina', '--host', '127.0.0.1', '--port', '0', '--no-open'], { env, cwd: project, stdio: ['ignore', 'pipe', 'pipe'] })
+  let output = ''
+  let resolveUrl, rejectUrl
+  const urlReady = new Promise((resolve, reject) => { resolveUrl = resolve; rejectUrl = reject })
+  const timer = setTimeout(() => rejectUrl(new Error('dsh startup timed out')), 30_000)
+  server.stdout.on('data', (chunk) => {
+    output += chunk
+    const match = output.match(/dsh web: (http:\/\/\S+)/u)
+    if (match) { clearTimeout(timer); resolveUrl(match[1]) }
+  })
+  server.stderr.on('data', (chunk) => { output += chunk })
+  server.on('exit', () => { clearTimeout(timer); rejectUrl(new Error('dsh exited before startup')) })
+  let browser
+  let page
+  try {
+    const url = await urlReady
+    const origin = new URL(url).origin
+    assert.equal((await fetch(`${origin}/tylina/`)).status, 401, 'the app must require the Harness session')
+    browser = await chromium.launch({ headless: Boolean(process.env.CI) })
+    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, permissions: ['clipboard-read', 'clipboard-write'] })
+    await context.addInitScript(() => localStorage.setItem('tylina.locale', 'en'))
+    page = await context.newPage()
+    const errors = []
+    const sockets = []
+    const editorSockets = []
+    page.on('pageerror', (error) => errors.push(error.message))
+    page.on('websocket', (socket) => { if (socket.url().includes('/tylina/runtime')) sockets.push(socket) })
+    page.on('websocket', (socket) => { if (new URL(socket.url()).pathname === '/tylina/editor') editorSockets.push(socket) })
+    await page.goto(url)
+    const continueButton = page.getByRole('button', { name: /^(继续|Continue)$/u })
+    await continueButton.click()
+    await page.getByRole('button', { name: /^(稍后配置|Set up later|Configure later)$/u }).click()
+    await page.getByRole('button', { name: /^(打开 Tylina|Open Tylina)$/u }).click()
+    await page.getByRole('button', { name: /^(新建 Harness 会话|New Harness session)$/u }).click()
+    await expect(page.locator('.tylina-dsh-project select')).not.toHaveValue('')
+    const sessionId = await page.locator('.tylina-dsh-project select').inputValue()
+    await page.getByRole('button', { name: /^(打开项目|Open project)$/u }).click()
+    const iframe = page.locator('.tylina-dsh-panel iframe')
+    const frame = await iframe.contentFrame()
+    const menu = async (group, item) => {
+      const top = frame.getByRole('button', { name: group, exact: true })
+      if (await top.isVisible()) await top.click()
+      else {
+        await frame.getByRole('button', { name: 'Main menu', exact: true }).click()
+        await frame.getByRole('menuitem', { name: group, exact: true }).click()
+      }
+      await frame.getByRole('menuitem', { name: item, exact: true }).click()
+    }
+    await frame.getByTitle('Plugin.typ', { exact: true }).dblclick()
+    await expect(frame.locator('.typst-doc')).toBeVisible({ timeout: 30_000 })
+    await expect(frame.locator('.web-document-title')).toHaveText('project')
+    await expect(frame.locator('.workspaceCurrentTitle')).toHaveText('project')
+    const readMain = () => readFile(join(project, 'Plugin.typ'), 'utf8')
+    const probeRequest = (input) => page.evaluate(async (input) => {
+      const response = await fetch('/tylina-acceptance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) })
+      if (!response.ok) throw new Error(await response.text())
+      return response.json()
+    }, { sessionId, ...input })
+    await expect.poll(async () => (await probeRequest({ action: 'catalog' })).filter((tool) => tool.name.startsWith('tylina_')).length).toBe(18)
+    const validated = await probeRequest({ name: 'tylina_validate_document' })
+    assert.equal(validated.isError, false)
+    assert.equal(validated.value.structuredContent.valid, true)
+    await verifyInstalledMcp({ page, frame, root, project, readMain, mode })
+    await verifyToolReconnect({ page, frame, root, mode, readMain, probeRequest, editorSockets, expect })
+    const info = (await probeRequest({ name: 'tylina_workspace_info' })).value.structuredContent
+    assert.equal(info.root, project)
+    await access(join(info.skillsRoot, 'typst-slides/scripts/rotate_images.py'))
+    const runtime = (await probeRequest({ name: 'tylina_tool_runtime' })).value.structuredContent
+    assert.equal(runtime.status, 'ready')
+    assert.equal(runtime.workspaceRoot, project)
+    assert.equal(runtime.skillsRoot, info.skillsRoot)
+    assert.match((await run(runtime.uvExecutable, ['--version'], { env: { ...env, ...runtime.environment }, cwd: project })).stdout, /^uv /u)
+    await expect.poll(readMain).toBe(source)
+    await menu('Format', 'Format Document')
+    await expect.poll(readMain).toContain('#let title = "Tylina in dsh"')
+    const formatted = await readMain()
+    assert.ok(formatted.includes('\r\n'))
+    await menu('Edit', 'Undo'); await expect.poll(readMain).toBe(source)
+    await menu('Edit', 'Redo'); await expect.poll(readMain).toBe(formatted)
+    await frame.getByRole('button', { name: 'Split', exact: true }).click()
+    await frame.getByTestId('monaco-source-editor').click({ position: { x: 180, y: 12 } })
+    await page.keyboard.press(process.platform === 'darwin' ? 'Meta+ArrowDown' : 'Control+End')
+    const edited = formatted + ' updated'
+    await page.keyboard.insertText(' updated')
+    await expect.poll(readMain).toBe(edited)
+    const read = (await probeRequest({ name: 'tylina_read_file', input: { file: 'Plugin.typ' } })).value.structuredContent
+    const agentEdited = edited + ' Agent tool'
+    assert.equal((await probeRequest({ name: 'tylina_write_file', input: {
+      file: 'Plugin.typ', contents: agentEdited, expectedSha256: read.sha256
+    } })).isError, false)
+    await expect.poll(readMain).toBe(agentEdited)
+    await menu('Edit', 'Undo'); await expect.poll(readMain).toBe(edited)
+    await menu('Edit', 'Redo'); await expect.poll(readMain).toBe(agentEdited)
+    const external = agentEdited + '\r\n\r\nExternal Harness edit'
+    await writeFile(join(project, 'Plugin.typ'), external)
+    await expect.poll(async () => (await probeRequest({ name: 'tylina_read_file', input: { file: 'Plugin.typ' } })).value.structuredContent.text).toBe(external)
+    await menu('Edit', 'Undo'); await expect.poll(readMain).toBe(agentEdited)
+    await menu('Edit', 'Redo'); await expect.poll(readMain).toBe(external)
+    await frame.getByRole('button', { name: 'Agent', exact: true }).click()
+    await expect(iframe).toBeVisible()
+    await page.getByRole('button', { name: /^(隐藏编辑器|Hide editor)$/u }).click()
+    await expect(iframe).toBeHidden()
+    await expect(page.getByRole('button', { name: /^(打开 Tylina|Open Tylina)$/u })).toBeFocused()
+    await expect(frame.locator('.workspaceAgentDock')).toHaveCount(0)
+    const rendered = await probeRequest({ name: 'tylina_render_page', input: { page: 1 } })
+    assert.equal(rendered.isError, false)
+    assert.ok(rendered.content.some((part) => part.type === 'image' && part.attachment?.attachmentId), 'the hidden live editor renders into real Harness attachments')
+    await page.getByRole('button', { name: /^(打开 Tylina|Open Tylina)$/u }).click()
+    await expect.poll(readMain).toBe(external)
+    assert.equal(sockets.length, mode === 'native' ? 1 : 0, 'hiding the editor must retain its runtime')
+    await expect(frame.locator('.typst-doc')).toBeVisible()
+    await page.screenshot({ path: join(root, `.benchmarks/dsh-${mode}.png`) })
+    await verifyDock({ page, frame, iframe, context, root, mode, readMain, probeRequest, expect, external, menu })
+    await verifySessionFollowing({ page, frame, home, probeRequest, readMain, external, expect })
+    await page.reload()
+    const setup = page.getByRole('button', { name: /^(稍后配置|Set up later|Configure later)$/u })
+    const launcher = page.getByRole('button', { name: /^(打开 Tylina|Open Tylina)$/u })
+    await expect.poll(async () => await setup.isVisible() || await launcher.isVisible()).toBe(true)
+    if (await setup.isVisible()) await setup.click()
+    if (mode === 'native' && process.platform !== 'win32') {
+      await expect.poll(async () => {
+        const { stdout } = await run('ps', ['-axo', 'ppid=,comm='])
+        return stdout.split('\n').filter((line) => {
+          const [parent, ...command] = line.trim().split(/\s+/u)
+          return parent === String(server.pid) && command.join(' ').includes('/runtime/')
+        }).length
+      }).toBe(0)
+    }
+    await page.getByRole('button', { name: /^(打开 Tylina|Open Tylina)$/u }).click()
+    await page.getByRole('button', { name: /^(打开项目|Open project)$/u }).click()
+    await expect.poll(readMain).toBe(external)
+    await expect(frame.locator('.typst-doc')).toBeVisible()
+    await expect(frame.locator('.web-document-title')).toHaveText('project')
+    assert.deepEqual(errors, [])
+    await expect.poll(async () => (await probeRequest({ action: 'catalog' })).filter((tool) => tool.name.startsWith('tylina_')).length).toBe(18)
+    const instructions = await probeRequest({ action: 'instructions' })
+    assert.equal([...instructions.pending, ...instructions.recorded].filter((message) => message.source.form === 'instructions').length, 1)
+    assert.equal(instructions.status, 'idle', 'opening a document does not start an inference task')
+    for (const marker of ['Agent loop verified.', 'Continued after compaction.']) {
+      if (marker.startsWith('Continued')) await probeRequest({ action: 'compact' })
+      await probeRequest({ action: 'turn', marker })
+      await expect.poll(async () => {
+        const state = await probeRequest({ action: 'model' })
+        if (state.error) throw new Error(state.error)
+        return state.complete && state.status === 'idle'
+      }, { timeout: 60_000 }).toBe(true)
+      const state = await probeRequest({ action: 'model' })
+      assert.equal(state.requests.length, 6)
+      await expect.poll(readMain).toBe(state.expected)
+      const pdf = await readFile(join(project, 'output/Agent.pdf'))
+      assert.equal(pdf.subarray(0, 5).toString(), '%PDF-')
+    }
+    page = await verifyWindowRecovery({ page, context, root, mode, sessionId, readMain, expect })
+    console.log(`PASS ${mode}: packed install, actual Agent loop and projects, compile/format, disk saves, external Undo, PDF export, image receipts, context replacement, host Agent navigation, hide/reopen, reload and disposal`)
+  } catch (error) {
+    await page?.screenshot({ path: join(root, `.benchmarks/dsh-${mode}-failure.png`) }).catch(() => undefined)
+    throw error
+  } finally {
+    clearTimeout(timer)
+    await browser?.close()
+    server.kill('SIGINT')
+    const killed = setTimeout(() => server.kill('SIGKILL'), 5000)
+    if (server.exitCode === null) await once(server, 'exit')
+    clearTimeout(killed)
+    await writeFile(join(home, 'server.log'), output.replace(/\?token=\S+/gu, '?token=[redacted]'))
+  }
+}

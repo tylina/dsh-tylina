@@ -1,0 +1,26 @@
+{
+  "name": "dsh-tylina",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "scripts": {
+    "prepare:source": "node scripts/prepare-source.mjs",
+    "typecheck": "pnpm --filter @tylina/dsh-plugin typecheck && pnpm --filter @tylina/dsh-native typecheck",
+    "build": "node scripts/build.mjs",
+    "build:wasm": "node scripts/build.mjs wasm",
+    "build:native": "node scripts/build.mjs native",
+    "pack:bundles": "node pack.mjs",
+    "test": "node --test tests/dsh-tools.mjs tests/dsh-skills.mjs tests/dsh-mcp.mjs tests/dsh-editor-connection.mjs tests/dsh-workspaces.mjs",
+    "test:installed": "node tests/dsh-bundles.mjs",
+    "verify:packages": "node scripts/verify-packages.mjs"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "2.0.0",
+    "@playwright/test": "1.63.0",
+    "cross-spawn": "7.0.6"
+  }
+}

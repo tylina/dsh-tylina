@@ -1,0 +1,27 @@
+export const en = { open: 'Open Tylina', close: 'Hide editor', title: 'Tylina', drafts: 'Browser drafts',
+  mcp: 'Connect an MCP client', copyMcp: 'Copy configuration', copied: 'Copied',
+  mcpHint: 'Give another MCP client access to this live document’s 18 tools, including editing, Typst compilation and Skills.',
+  mcpExpiry: 'The configuration includes a private access key for this project. It expires when the editor closes, reconnects or changes projects. Harness already has these tools.',
+  session: 'Harness session', directory: 'Project subdirectory (optional)', choose: 'Choose a document project',
+  hint: 'Edit files in this conversation’s working directory, or choose a project within it.',
+  submit: 'Open project', change: 'Change project', chat: 'Focus this conversation', retry: 'Reconnect Agent tools',
+  reconnecting: 'Reconnecting Agent tools…',
+  loading: 'Opening project…', noSession: 'Create or select a Harness session to open its document project.',
+  create: 'New Harness session', cancel: 'Cancel', saveFailed: 'Resolve the document’s save issue before continuing.',
+  dismiss: 'Dismiss message', resize: 'Resize document panel', popout: 'Open in separate window', dock: 'Return to sidebar',
+  blocked: 'Allow pop-up windows for this site, then try again.',
+  disconnected: 'Could not reach the Harness conversation. Keep editing here, or try returning to the sidebar again.' }
+export const zh: typeof en = { open: '打开 Tylina', close: '隐藏编辑器', title: 'Tylina', drafts: '浏览器草稿',
+  mcp: '连接 MCP 客户端', copyMcp: '复制配置', copied: '已复制',
+  mcpHint: '让其他 MCP 客户端使用此实时文档的 18 项工具，包括编辑、Typst 编译与 Skills。',
+  mcpExpiry: '配置包含此项目的私密访问密钥，关闭编辑器、重连或切换项目后失效。Harness 已经可以使用这些工具。',
+  session: 'Harness 会话', directory: '项目子目录（可选）', choose: '选择文档项目',
+  hint: '编辑此会话工作目录中的文件，也可以选择其中的文档项目子目录。',
+  submit: '打开项目', change: '切换项目', chat: '聚焦此会话', retry: '重新连接 Agent 工具', loading: '正在打开项目…',
+  reconnecting: '正在重新连接 Agent 工具…',
+  noSession: '先创建或选择一个 Harness 会话，再打开其文档项目。', create: '新建 Harness 会话', cancel: '取消',
+  saveFailed: '请先处理文档的保存问题，再继续操作。', dismiss: '关闭提示', resize: '调整文档侧栏宽度',
+  popout: '在独立窗口打开', dock: '返回侧边栏', blocked: '请允许此站点打开弹出窗口，然后重试。',
+  disconnected: '暂时无法连接 Harness 会话。可以在此继续编辑，或再次尝试返回侧边栏。' }
+export type Translate = (key: keyof typeof en) => string
+declare module '@deepseek-ai/dsh-client-ui-slots' { interface LocaleNamespaceMap { tylina: keyof typeof en } }

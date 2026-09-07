@@ -1,0 +1,8 @@
+node_modules/
+.tylina/
+dist/
+release/
+.benchmarks/
+bundle-native/runtime/
+*.log
+.DS_Store

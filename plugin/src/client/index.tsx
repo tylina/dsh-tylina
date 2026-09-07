@@ -1,0 +1,197 @@
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { createPortal } from 'react-dom'
+import { IconFolder, IconRefresh, IconMessageCircle, IconExternalLink, IconX } from '@tabler/icons-react'
+import type { Context } from '@deepseek-ai/cordis'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
+import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
+import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
+import type {} from '@deepseek-ai/dsh-client-locale/client'
+import type {} from '@deepseek-ai/dsh-api-session-controller/client'
+import { openHarnessDocument, prepareHarnessProject, type HarnessDocument } from './document'
+import { css } from './styles'
+
+import { en, zh } from './locale'
+import { DockResize, useDocumentDock } from './dock'
+import { createProjectWindow, type ProjectWindow } from './popout'
+import { attachProjectLauncher, type ProjectLauncherOptions } from './window-launcher'
+import { readProjectWindow } from './window-record'
+import { ensureHarnessWorkspace } from './workspace'
+import { McpConnectionButton } from './mcp-connection'
+import { useToolReconnect } from './use-tool-reconnect'
+
+type Props = PropsRuntime<'sidebar.footer.action'> & PropsLocale<'tylina'> & { ctx: Context }
+interface Project { sessionId: SessionId; project: string }
+
+function EditorAction({ ctx, wide, t }: Props) {
+  const launcher = useRef<HTMLButtonElement>(null), hideButton = useRef<HTMLButtonElement>(null)
+  const container = useRef<HTMLDivElement>(null), floating = useRef<ProjectWindow | undefined>(undefined)
+  const [visible, setVisible] = useState(false)
+  const dock = useDocumentDock(visible)
+  const currentDocument = useRef<HarnessDocument | undefined>(undefined)
+  const alive = useRef(true), opening = useRef(false)
+  const sessions = useSyncExternalStore(ctx.sessions.list.subscribe, ctx.sessions.list.getSnapshot)
+  const [selection, setSelection] = useState<Project | undefined>()
+  const [selectedId, setSelectedId] = useState<SessionId | ''>('')
+  const [project, setProject] = useState('')
+  const [changing, setChanging] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string>()
+  const followedSession = useRef<SessionId | null>(null)
+  useEffect(() => { alive.current = true; return () => { alive.current = false; currentDocument.current?.dispose(); floating.current?.dispose() } }, [])
+  const report = (error: Error) => { if (alive.current) setError(error.message) }
+  const toolConnection = useToolReconnect(() => currentDocument.current, report)
+  const show = () => {
+    if (floating.current) { try { floating.current.focus() } catch (error) { report(error as Error) } return }
+    void ctx.sessions.refresh().catch(report)
+    if (!selection) setSelectedId(sessions.current ?? sessions.ids[0] ?? '')
+    setVisible(true)
+    requestAnimationFrame(() => hideButton.current?.focus())
+  }
+  const hide = () => { setVisible(false); requestAnimationFrame(() => launcher.current?.focus()) }
+  const focusChat = (id: SessionId) => { ctx.sessions.open(id); if (window.innerWidth < 900) hide() }
+  const open = async (next: Project = { sessionId: selectedId as SessionId, project: project.trim() }, selectConversation = true) => {
+    if (opening.current || !container.current || !next.sessionId || !ctx.sessions.list.getSnapshot().byId[next.sessionId]) return new Error(t('noSession'))
+    opening.current = true; setBusy(true); setError(undefined)
+    try {
+      if (currentDocument.current && !await currentDocument.current.editor.save()) throw new Error(t('saveFailed'))
+      await ensureHarnessWorkspace(ctx, next.sessionId)
+      const prepared = await prepareHarnessProject(next)
+      if (!alive.current) return
+      currentDocument.current?.dispose(); currentDocument.current = undefined; setSelection(undefined)
+      const editor = await openHarnessDocument(container.current, { ...next, prepared, onError: report,
+        onOpenAgent() {
+          if (!alive.current || !ctx.sessions.list.getSnapshot().byId[next.sessionId]) throw new Error(t('noSession'))
+          focusChat(next.sessionId)
+        }
+      })
+      if (!alive.current) { editor.dispose(); return }
+      currentDocument.current = editor; setSelection(next); setChanging(false)
+      if (selectConversation) ctx.sessions.open(next.sessionId)
+    } catch (error) {
+      const failure = error instanceof Error ? error : new Error(String(error))
+      report(failure); return failure
+    }
+    finally { opening.current = false; if (alive.current) setBusy(false) }
+  }
+  useEffect(() => {
+    const id = sessions.current
+    if (!selection || !id || busy || changing || floating.current) return
+    if (id === selection.sessionId) { followedSession.current = null; return }
+    if (followedSession.current === id) return
+    followedSession.current = id
+    setSelectedId(id); setProject(''); setChanging(true)
+    void open({ sessionId: id, project: '' }, false)
+  }, [sessions.current, selection, busy, changing])
+  const launcherOptions: ProjectLauncherOptions = { t, onError: report,
+    async restore(project) {
+      await ctx.sessions.refresh()
+      if (!alive.current) throw new Error(t('disconnected'))
+      setVisible(true); setChanging(true)
+      const error = await open({ ...project, sessionId: project.sessionId as SessionId })
+      if (error) { setVisible(false); throw error }
+      floating.current = undefined
+    },
+    async chat(project) {
+      await ctx.sessions.refresh()
+      if (!alive.current || !ctx.sessions.list.getSnapshot().byId[project.sessionId as SessionId]) throw new Error(t('noSession'))
+      focusChat(project.sessionId as SessionId)
+    }
+  }
+  const latestLauncherOptions = useRef(launcherOptions)
+  latestLauncherOptions.current = launcherOptions
+  useEffect(() => {
+    const record = readProjectWindow()
+    if (record) floating.current = attachProjectLauncher(record, { t,
+      restore: (project) => latestLauncherOptions.current.restore(project),
+      chat: (project) => latestLauncherOptions.current.chat(project), onError: report })
+  }, [])
+  const popout = () => {
+    if (!selection || busy || floating.current) return
+    const bound = selection
+    try {
+      floating.current = createProjectWindow({ ...launcherOptions, project: bound,
+        async release(remember) {
+          setBusy(true)
+          try {
+            if (!await currentDocument.current?.editor.save()) throw new Error(t('saveFailed'))
+            remember()
+            currentDocument.current?.dispose(); currentDocument.current = undefined
+            setVisible(false)
+          } catch (error) { floating.current = undefined; report(error as Error); throw error }
+          finally { if (alive.current) setBusy(false) }
+        }
+      })
+    } catch (error) { report(error as Error) }
+  }
+  return <>
+    <button ref={launcher} type="button" className="tylina-dsh-open" title={t('open')} aria-label={t('open')}
+      aria-expanded={visible} aria-controls="tylina-dsh-editor-panel" onClick={() => visible ? hide() : show()}>
+      <img src="/tylina/favicon.svg" width="20" height="20" alt="" />{wide && <span>{t('title')}</span>}
+    </button>
+    {createPortal(<aside id="tylina-dsh-editor-panel" className="tylina-dsh-panel" aria-label={t('title')} hidden={!visible}
+      role={dock.narrow ? 'dialog' : 'complementary'} aria-modal={dock.narrow || undefined}
+      style={{ width: dock.width }} onKeyDown={(event) => {
+        if (event.key === 'Escape' && !event.defaultPrevented) { event.preventDefault(); hide() }
+      }}>
+      {!dock.narrow && <DockResize width={dock.width} update={dock.update} label={t('resize')} />}
+      <div className="tylina-dsh-bar">
+        <strong>{t('title')}</strong>
+        <span className="tylina-dsh-session" title={selection && sessions.byId[selection.sessionId]?.cwd}>
+          {selection && (sessions.byId[selection.sessionId]?.displayTitle ?? selection.sessionId)}
+        </span>
+        {selection && <>
+          <McpConnectionButton getDocument={() => currentDocument.current} t={t} disabled={busy || changing || toolConnection.busy} />
+          <button type="button" title={t('change')} aria-label={t('change')} disabled={busy}
+            onClick={() => {
+              void ctx.sessions.refresh().catch(report)
+              setSelectedId(selection.sessionId); setProject(selection.project); setChanging(true)
+            }}><IconFolder size={16} /></button>
+          <button type="button" title={t(toolConnection.busy ? 'reconnecting' : 'retry')}
+            aria-label={t(toolConnection.busy ? 'reconnecting' : 'retry')} aria-busy={toolConnection.busy}
+            disabled={busy || toolConnection.busy} onClick={toolConnection.reconnect}><IconRefresh size={16} /></button>
+          <button type="button" title={t('chat')} aria-label={t('chat')}
+            onClick={() => focusChat(selection.sessionId)}><IconMessageCircle size={16} /></button>
+          <button type="button" title={t('popout')} aria-label={t('popout')} disabled={busy || changing}
+            onClick={popout}><IconExternalLink size={16} /></button>
+        </>}
+        <button ref={hideButton} type="button" onClick={hide} title={t('close')} aria-label={t('close')}><IconX size={16} /></button>
+      </div>
+      {error && <div className="tylina-dsh-error" role="alert"><span>{error}</span>
+        <button type="button" aria-label={t('dismiss')} onClick={() => setError(undefined)}><IconX size={16} /></button></div>}
+      {changing && <form className="tylina-dsh-project" onSubmit={(event) => { event.preventDefault(); void open() }}>
+        <img src="/tylina/favicon.svg" width="42" height="42" alt="" />
+        <h2>{t('choose')}</h2><p>{t('hint')}</p>
+        {sessions.ids.length ? <>
+          <label>{t('session')}<select value={selectedId} disabled={busy} onChange={(event) => setSelectedId(event.target.value as SessionId)}>
+            <option value="" disabled>{t('session')}</option>
+            {sessions.ids.map((id) => <option key={id} value={id}>{sessions.byId[id]?.displayTitle ?? id}</option>)}
+          </select></label>
+          <div className="tylina-dsh-directory">{selectedId && sessions.byId[selectedId]?.cwd}</div>
+          <label>{t('directory')}<input value={project} disabled={busy} placeholder="papers/report" spellCheck={false}
+            onChange={(event) => setProject(event.target.value)} /></label>
+          <div className="tylina-dsh-project-actions">
+            {selection && <button type="button" disabled={busy} onClick={() => setChanging(false)}>{t('cancel')}</button>}
+            <button type="submit" disabled={busy || !selectedId}>{busy ? t('loading') : t('submit')}</button>
+          </div>
+        </> : <><p>{t('noSession')}</p><button type="button" onClick={() => {
+          void ctx.sessions.create({}).then((id) => setSelectedId(id)).catch(report)
+        }}>{t('create')}</button></>}
+        <a href="/tylina/" target="_blank" rel="noopener noreferrer">{t('drafts')}</a>
+      </form>}
+      <div ref={container} className="tylina-dsh-editor" hidden={changing} />
+    </aside>, window.document.body)}
+  </>
+}
+
+export const inject = ['slots', 'locale', 'sessions', 'workspaces']
+export function apply(ctx: Context): void {
+  ctx.effect(() => ctx.locale.register('tylina', { en, zh }))
+  ctx.effect(() => {
+    const style = document.createElement('style'); style.textContent = css
+    document.head.append(style); return () => style.remove()
+  })
+  ctx.slots.inject('sidebar.footer.action', () => ctx.slots.register(
+    { name: 'sidebar.footer.action', id: 'tylina', locale: 'tylina' }, (props) => <EditorAction {...props} ctx={ctx} />
+  ))
+}

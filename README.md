@@ -1,0 +1,182 @@
+# Tylina for DeepSeek Harness
+
+Two self-contained profile bundles mount the same Web editor in the Harness sidebar:
+
+- `@tylina/dsh-wasm`: compilation and Tinymist language services run in the browser's Workers.
+- `@tylina/dsh-native`: the Node host runs the packaged Tinymist executables through an authenticated WebSocket.
+  This artifact targets the build machine's operating system and CPU architecture.
+
+Both include the complete built Web application, templates, browser resources, renderer and embedding entry.
+Both also register every bundled Typst domain in Harness's Skills catalog using its released filesystem provider.
+The complete Desktop Skills tree, including references, scripts and template resources, is copied at build time.
+Bodies are loaded on demand; the Tylina provider adds no project/user roots or filesystem watchers.
+The editor's source, resources, history, menus and persistence use the existing shared implementations.
+The default right panel sits beside the conversation and can be resized with the pointer or keyboard.
+Hiding the panel preserves its editing session, Undo and Agent tools. Narrow windows show one surface at a time.
+
+Open Tylina, choose or create a Harness conversation, and open its working directory or a project within it.
+The file list opens first when no main file has been selected; double-click the document to use as main.
+Source edits save to the actual Harness project in both variants. External script and filesystem edits appear
+through the editor's normal conflict handling and Undo. The project remains bound to the selected conversation
+while editing. The dock follows conversation changes after saving the current document; save failures retain
+the current editor and show the problem. API-created sessions receive the Workspace registration that Harness's
+chat composer requires, using the same existing session identity and actual working directory.
+“Focus this conversation” keeps the document running while showing its chat.
+“Open in separate window” saves before handing the project and exclusive tools to a standalone window.
+A blocked popup or failed save keeps the current editor. “Return to sidebar” saves and hands the project back.
+Window handoff recreates the editor and compiler: saved files, resources and main/active file selection survive,
+but its in-memory Undo stack does not cross windows. A detached window stays bound to its original conversation.
+The separate “Browser drafts” entry opens the standalone editor with browser storage.
+
+## Build and install
+
+This repository builds independently of a parent Tylina checkout. Prerequisites are Node.js 22.19+
+(or Node.js 24), pnpm 11.9, Git, Rust with `wasm32-unknown-unknown`, and `wasm-pack`.
+Native builds additionally need the platform's Rust/C++ toolchain.
+
+```sh
+git clone https://github.com/tylina/dsh-tylina.git
+cd dsh-tylina
+node scripts/prepare-source.mjs
+pnpm install --frozen-lockfile
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm pack:bundles
+pnpm verify:packages
+```
+
+`tylina-source.json` pins the shared editor, tools, Skills and runtime source at one immutable commit.
+The preparation command checks it out under ignored `.tylina/` and initializes only Tinymist;
+it does not recursively clone this integration. `pnpm-workspace.yaml` links those source packages
+into this build without copying them into the plugin source or requiring unpublished npm packages.
+To update the shared editor, change the pin, prepare the source and update this repository's lockfile.
+
+`pnpm build:wasm` builds only the browser bundle; `pnpm build:native` builds the native variant.
+`release/` contains both `.tgz` bundles and a manifest with byte counts, SHA-256 and native platform identity.
+The packed native manifest restricts installation to its actual OS and architecture.
+
+Install **one** variant into an existing Web profile:
+
+```sh
+dsh plugin --profile web add /absolute/path/tylina-dsh-wasm-0.4.0.tgz
+dsh --profile web
+```
+
+For native compilation, install `tylina-dsh-native-0.4.0.tgz` instead.
+Remove the previous variant with `dsh plugin --profile web remove @tylina/dsh-wasm` before switching.
+The bundles use the same `tylina` configuration row and must not be stacked together.
+Custom profiles must contain `@deepseek-ai/dsh-base` and `@deepseek-ai/dsh-web-app` before the Tylina bundle.
+
+There are no install scripts, source-checkout requirements or compiler binary downloads.
+The native tarball preserves executable permissions through pnpm's `publishConfig.executableFiles`.
+The integration currently targets the released Harness `0.1.2-rc.1` plugin contracts.
+
+## Ownership
+
+`plugin/src` owns the shared Cordis registration, dock, window handoff, static serving and socket adapter.
+Each distribution bundles that implementation under its own client factory identity.
+`packages/node-runtime` owns native LSP, compiler processes, filesystem snapshots and conditional publication;
+`packages/embed` owns the browser socket carrier and versioned workspace callbacks.
+`packages/browser-host` converts that carrier into the same capabilities as local Workers.
+Electron retains its own binary discovery and IPC adapters.
+
+Harness project access uses the selected Agent's filesystem provider and requires an explicit host-directory
+mapping. No provider target keys are parsed as native paths. Snapshots preserve text encodings and binary bytes;
+project-owned symlinks and special files are rejected. VCS metadata and dependency directories are excluded.
+The limits are 4096 files, 64 MiB per file and 128 MiB per workspace. Choose a smaller document subdirectory when needed.
+Saving checks the previous content revision, publishes each file atomically and attempts guarded rollback if a
+later write fails. This is not a filesystem-wide transaction. An uncertain or conflicting write remains an error
+until the current disk contents are inspected and reconciled; it is never silently replayed.
+The native compiler receives complete memory snapshots and cannot opt into disk-backed workspace compilation.
+Every editor connection owns independent preview, command and language-service sessions.
+Disposing the editor destroys its native sessions. A tool socket disconnect rejects pending calls while preserving
+the document; “Reconnect Agent tools” explicitly restores tool registration without replaying previous calls.
+
+The bound Agent receives the shared 18-tool catalog, including current unsaved file reads, version-checked writes,
+Typst validation, semantic document queries, templates, Skills and actual rendered image attachments.
+The ordinary Harness Agent owns model configuration, keys and chat. Opening a document queues the shared authoring
+instructions but does not start inference. Tool registration is session scoped and exclusively owned by one editor.
+Both bundles expose the complete Desktop Skill scripts in the Harness filesystem. `tylina_tool_runtime` supplies
+the actual project and Skill roots and an isolated uv environment. It prefers installed system uv; when absent,
+an explicit tool request starts managed background installation using the shared Desktop installer.
+
+App routes and socket upgrades reuse Harness Connection authentication and Host/Origin checks.
+The plugin adds no unauthenticated process endpoint, arbitrary network proxy or application launcher.
+Use the normal Harness authenticated URL to log in before opening `/tylina/` directly.
+
+## MCP clients
+
+The plug icon in the document header opens **Connect an MCP client**. Copy the configuration into a
+Streamable HTTP MCP client to use the same 18 live document tools and authoring instructions.
+Harness already receives these tools directly; this connection is for another client and does not duplicate
+the Harness Agent's tool catalog. Tools read the live editor, retain version-checked file writes and Undo,
+and use the same compiler, templates and packaged Skills as the ordinary Harness tools.
+
+The exported configuration uses the common `mcpServers` wrapper, with an HTTP `url` and an `Authorization`
+header. Adapt the outer configuration key if your client uses another format (for example VS Code's `servers`).
+The key grants access to this document project only. Keep the editor open; hiding its sidebar is fine.
+Closing, reconnecting, changing projects or moving the document between windows revokes that configuration.
+Copy a new one after reconnecting. An old client never silently follows a different project.
+
+The key is generated in memory for each editor connection and sent to its authenticated browser only.
+It is not the Harness login credential and never enters workspace files, preferences or share URLs.
+Machine clients still pass the Harness Host/Origin fence. MCP 2025 protocol sessions retain cancellation
+correlation; modern clients use the SDK's per-request transport. Closing an editor cancels both.
+Requests and concurrent clients have bounded size and count; uncertain mutations are never replayed by Tylina.
+
+## Acceptance
+
+After packaging, with the supported `dsh` executable available:
+
+```sh
+pnpm test:installed
+```
+
+This installs the tarballs into isolated profiles, launches the real Harness, and opens Chromium.
+It verifies authentication, actual project and Agent instances, compilation and formatting, CRLF preservation,
+Source input, disk saves, external edits and exact Undo/Redo, hidden-editor image attachments, real system uv,
+pending instructions, reload and native process cleanup. A deterministic streaming model adapter then drives
+the actual Agent loop through reading, editing, validation, PDF export to the project and image rendering.
+The next model request must receive each real tool result. The suite replaces the actual Session message surface
+as compaction does and repeats the turn, verifying that authoring instructions remain present exactly once.
+The model fixture and authenticated test probe are not distributed. No model API key or live provider inference
+is involved; the test controls model output and the summary text, while Harness owns its actual loop and history.
+It also exercises the dock beside an editable chat, pointer/keyboard resizing, narrow-screen focus isolation,
+blocked popups, rejected project saves with unsaved text retained, separate-window edits and return to the dock.
+Switching between two real conversations transfers tools and restores each project's main file without changing
+the other project's bytes. A completed-history fixture makes those conversations visible in Harness navigation.
+Screenshots and isolated profile logs live under `.benchmarks`. Set `TYLINA_DSH_OFFLINE=1` only when all exact
+dependencies are already in the local pnpm store; ordinary acceptance allows dependency downloads.
+The installed suite also copies the actual MCP configuration and uses the official SDK to verify scoped
+workspace reads, writes, compilation, images, Skills, templates and revocation. The transport suite is
+`node --test tests/dsh-mcp.mjs`; it checks both protocol eras, authentication,
+schema rejection and cancellation. Bundles include notices for the server dependencies actually embedded.
+`node --test tests/dsh-skills.mjs` also checks discovery, exact bodies and disposal
+against the real released Cordis and Skill registry.
+`node --test tests/dsh-tools.mjs tests/dsh-editor-connection.mjs`
+checks the shared 18-tool catalog against the released Harness registry and the authenticated editor
+connection over real sockets, including session isolation, cancellation and teardown. These boundary
+tests do not invoke a model or prove the installed Agent loop.
+
+`node --test tests/node-workspace.mjs tests/dsh-workspaces.mjs`
+checks actual filesystem snapshots and publication, lost acknowledgments, rollback, path boundaries, provider
+mapping and authenticated HTTP project access against the released Harness filesystem.
+
+The remaining integration work is tracked in the issue tracker: additional project and session recovery
+cases, live-provider acceptance when configured and the broader product acceptance matrix.
+
+## npm distribution
+
+The public package names are `@tylina/dsh-wasm` and `@tylina/dsh-native`; `plugin/` is private
+implementation shared by the two bundles. Both publish only compiled output and bundled resources,
+with repository metadata, a public access setting and no runtime workspace dependencies.
+`pnpm pack:bundles` and `pnpm verify:packages` are the release gate before publishing a tarball.
+No npm publication happens during build or CI.
+
+The native package currently contains one platform's binaries. Do not publish different architectures
+under the same npm name/version: npm versions are immutable. Before a multi-platform npm release,
+split native binaries into platform-specific packages selected through optional dependencies.
+The current platform-tagged tarballs remain suitable for local Harness installation.
+Licensing is inherited from Tylina (`UNLICENSED`); third-party notices are included separately.
+Confirm the project's intended distribution license before an npm release.

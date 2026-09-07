@@ -1,8 +1,6 @@
 packages:
   - plugin
   - bundle-*
-  - .tylina/packages/*
-  - .tylina/apps/web
 
 overrides:
   esbuild: 0.28.1
@@ -23,5 +21,18 @@ minimumReleaseAgeExclude:
   - '@playwright/test@1.63.0'
   - playwright-core@1.63.0
   - playwright@1.63.0
-patchedDependencies:
-  monaco-editor@0.55.1: .tylina/patches/monaco-editor@0.55.1.patch
+  - tylina-font-assets-10@0.4.0
+  - tylina-font-assets-11@0.4.0
+  - tylina-font-assets-12@0.4.0
+  - tylina-font-assets-1@0.4.0
+  - tylina-font-assets-2@0.4.0
+  - tylina-font-assets-3@0.4.0
+  - tylina-font-assets-4@0.4.0
+  - tylina-font-assets-5@0.4.0
+  - tylina-font-assets-6@0.4.0
+  - tylina-font-assets-7@0.4.0
+  - tylina-font-assets-8@0.4.0
+  - tylina-font-assets-9@0.4.0
+  - tylina-native-darwin-arm64@0.4.0
+  - tylina-sdk@0.4.0
+  - tylina-web-assets@0.4.0

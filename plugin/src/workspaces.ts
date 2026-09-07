@@ -5,7 +5,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { FileSystem } from '@deepseek-ai/dsh-fs'
 import type {} from '@deepseek-ai/dsh-api-session-controller'
 import { SessionId } from '@deepseek-ai/dsh-session/types'
-import { checkWorkspacePath, createNodeWorkspacePool, nativeWorkspacePath, requireWorkspaceRelativePath } from '@tylina/node-runtime/workspace'
+import { checkWorkspacePath, createNodeWorkspacePool, nativeWorkspacePath, requireWorkspaceRelativePath } from 'tylina-sdk/node'
 import { decodeWorkspace, encodeWorkspace, type WorkspaceWire } from './workspace-wire'
 import { withAgentServices } from './agent-services'
 

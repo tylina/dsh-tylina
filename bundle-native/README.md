@@ -1,11 +1,11 @@
 # Tylina for DeepSeek Harness (native)
 
-This 0.4.0 package supports macOS Apple Silicon (darwin-arm64). Typst and Tinymist run as bundled native processes on the Harness host. For other platforms, use `@tylina/dsh-wasm`.
+Typst and Tinymist run on the Harness host. This universal entry selects a separate native runtime package for Linux, macOS or Windows on x64 or arm64. Keep npm optional dependencies enabled. The selected runtime is checked before launch; unavailable runtimes produce an explicit error. Use `dsh-tylina` for browser WASM compilation.
 
 Requires Node.js 22.19+ and DeepSeek Harness 0.1.2-rc.1.
 
 ```sh
-dsh plugin --profile web add @tylina/dsh-native@0.4.0
+dsh plugin --profile web add dsh-tylina-native@0.4.0
 dsh --profile web
 ```
 

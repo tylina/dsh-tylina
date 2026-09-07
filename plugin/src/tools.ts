@@ -1,9 +1,9 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-attachment'
-import { createTylinaToolDefinitions } from '@tylina/agent-tools/catalog'
-import { createWorkspaceFileToolDefinitions } from '@tylina/agent-tools/files'
-import type { ToolResult } from '@tylina/agent-tools/registry'
+import { createTylinaToolDefinitions } from 'tylina-sdk/tools'
+import { createWorkspaceFileToolDefinitions } from 'tylina-sdk/tools'
+import type { ToolResult } from 'tylina-sdk/tools'
 import { admitTylinaToolResult, tylinaToolOutput } from './tool-results'
 
 export type EditorToolCaller = (name: string, input: unknown, signal: AbortSignal) => Promise<ToolResult>

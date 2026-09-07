@@ -20,14 +20,15 @@ for (const artifact of artifacts) {
   for (const dependency of Object.values({ ...manifest.dependencies, ...manifest.peerDependencies })) {
     assert.ok(!dependency.startsWith('workspace:') && !dependency.startsWith('file:') && !dependency.startsWith('link:'))
   }
-  for (const path of ['dist/index.js', 'dist/client.js', 'dist/web/index.html', 'dist/skills/typst-authoring/SKILL.md', 'cordis.patch.yml']) assert.ok(names.includes(`package/${path}`), path)
+  for (const path of ['dist/index.js', 'dist/client.js', 'dist/web/project-window.html', 'cordis.patch.yml']) assert.ok(names.includes(`package/${path}`), path)
   assert.ok(!names.some((path) => path.includes('/node_modules/') || path.startsWith('package/plugin/src/') || path.startsWith('package/.tylina/')))
-  if (artifact.platform) {
-    const runtime = JSON.parse(execFileSync('tar', ['-xOzf', archive, 'package/runtime/manifest.json'], { encoding: 'utf8' }))
-    assert.equal(runtime.platform, artifact.platform)
-    assert.equal(runtime.arch, artifact.arch)
-    assert.deepEqual(manifest.os, [runtime.platform])
-    assert.deepEqual(manifest.cpu, [runtime.arch])
+  assert.equal(manifest.dependencies['tylina-web-assets'], version)
+  assert.ok(artifact.bytes < 20 * 1024 * 1024, 'Integration must reuse shared npm resources')
+  assert.equal(manifest.os, undefined)
+  assert.equal(manifest.cpu, undefined)
+  if (manifest.name === 'dsh-tylina-native') {
+    assert.equal(Object.keys(manifest.optionalDependencies).length, 6)
+    assert.ok(!names.some((name) => name.startsWith('package/runtime/')))
   }
   console.log(`Verified ${artifact.file} (${bytes.length} bytes)`)
 }

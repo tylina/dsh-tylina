@@ -1,5 +1,5 @@
-import type { EmbeddedWorkspace } from '@tylina/editor-host/embedded-workspace'
-import { decodeBase64, encodeBase64 } from '@tylina/editor-host/base64'
+import type { EmbeddedWorkspace } from 'tylina-sdk/client'
+import { decodeBase64, encodeBase64 } from 'tylina-sdk/protocol'
 
 export type WorkspaceWire = Omit<EmbeddedWorkspace, 'resources'> & { resources: Record<string, string> }
 export interface ProjectSnapshot { workspace: WorkspaceWire; revision: string; mode: 'wasm' | 'native' }

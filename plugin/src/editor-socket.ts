@@ -1,7 +1,7 @@
 import type { IncomingMessage } from 'node:http'
 import type { Duplex } from 'node:stream'
 import { WebSocketServer, WebSocket } from 'ws'
-import type { ToolResult } from '@tylina/agent-tools/registry'
+import type { ToolResult } from 'tylina-sdk/tools'
 import type { EditorToolCaller } from './tools'
 import type { EditorMcpConnection } from './mcp-wire'
 

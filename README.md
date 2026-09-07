@@ -2,13 +2,13 @@
 
 Two self-contained profile bundles mount the same Web editor in the Harness sidebar:
 
-- `@tylina/dsh-wasm`: compilation and Tinymist language services run in the browser's Workers.
-- `@tylina/dsh-native`: the Node host runs the packaged Tinymist executables through an authenticated WebSocket.
-  This artifact targets the build machine's operating system and CPU architecture.
+- `dsh-tylina`: compilation and Tinymist language services run in the browser's Workers.
+- `dsh-tylina-native`: the Node host runs the packaged Tinymist executables through an authenticated WebSocket.
+  npm selects a separately packaged runtime for the user's operating system and CPU architecture.
 
-Both include the complete built Web application, templates, browser resources, renderer and embedding entry.
+Both reuse the complete built Web application, templates, fonts and renderer from shared npm resource dependencies.
 Both also register every bundled Typst domain in Harness's Skills catalog using its released filesystem provider.
-The complete Desktop Skills tree, including references, scripts and template resources, is copied at build time.
+The complete Desktop Skills tree, including references, scripts and template resources, is provided by the shared resource package.
 Bodies are loaded on demand; the Tylina provider adds no project/user roots or filesystem watchers.
 The editor's source, resources, history, menus and persistence use the existing shared implementations.
 The default right panel sits beside the conversation and can be resized with the pointer or keyboard.
@@ -30,51 +30,45 @@ The separate “Browser drafts” entry opens the standalone editor with browser
 
 ## Build and install
 
-This repository builds independently of a parent Tylina checkout. Prerequisites are Node.js 22.19+
-(or Node.js 24), pnpm 11.9, Git, Rust with `wasm32-unknown-unknown`, and `wasm-pack`.
-Native builds additionally need the platform's Rust/C++ toolchain.
-The pinned Tylina core repository is currently private: building from source requires a GitHub
-account with read access and authenticated Git. Installing a prebuilt bundle requires neither.
-CI requires `TYLINA_SOURCE_SSH_KEY`, a dedicated read-only deploy key for that core repository.
-The key is used only during source preparation and is removed before dependency scripts run.
-Fork pull requests cannot access this secret; maintainers must run checks from a trusted branch.
+This repository builds with Node.js 22.19+ (or Node.js 24), pnpm 11.9 and Git.
+It installs only published npm artifacts: `tylina-sdk`, `tylina-web-assets` and an optional
+platform-specific native runtime. No Tylina core checkout, repository credential, Rust compiler
+or wasm-pack is needed, including in CI and fork pull requests.
 
 ```sh
 git clone https://github.com/tylina/dsh-tylina.git
 cd dsh-tylina
-node scripts/prepare-source.mjs
 pnpm install --frozen-lockfile
 pnpm typecheck
 pnpm test
-pnpm build
-pnpm pack:bundles
-pnpm verify:packages
+pnpm build:wasm
 ```
 
-`tylina-source.json` pins the shared editor, tools, Skills and runtime source at one immutable commit.
-The preparation command checks it out under ignored `.tylina/` and initializes only Tinymist;
-it does not recursively clone this integration. `pnpm-workspace.yaml` links those source packages
-into this build without copying them into the plugin source or requiring unpublished npm packages.
-To update the shared editor, change the pin, prepare the source and update this repository's lockfile.
+The SDK contains compiled adapters and public API declarations. Web resources contain the compiled
+application, WASM, fonts, templates and Skills. Native runtime packages contain executable binaries.
+Core TypeScript/Rust sources and source maps are excluded from those packages.
+Update the exact npm dependency versions and lockfile to upgrade Tylina.
+The native entry resolves a separate runtime for Linux, macOS and Windows on x64 or arm64.
+Each runtime is built and smoke-tested on its matching platform before distribution.
 
 `pnpm build:wasm` builds only the browser bundle; `pnpm build:native` builds the native variant.
-`release/` contains both `.tgz` bundles and a manifest with byte counts, SHA-256 and native platform identity.
-The packed native manifest restricts installation to its actual OS and architecture.
+`release/` contains both `.tgz` bundles and a manifest with byte counts and SHA-256.
+Each native runtime manifest restricts installation to its actual OS and architecture.
 
 Install **one** variant into an existing Web profile:
 
 ```sh
-dsh plugin --profile web add /absolute/path/tylina-dsh-wasm-0.4.0.tgz
+dsh plugin --profile web add /absolute/path/dsh-tylina-0.4.0.tgz
 dsh --profile web
 ```
 
-For native compilation, install `tylina-dsh-native-0.4.0.tgz` instead.
-Remove the previous variant with `dsh plugin --profile web remove @tylina/dsh-wasm` before switching.
+For native compilation, install `dsh-tylina-native-0.4.0.tgz` instead.
+Remove the previous variant with `dsh plugin --profile web remove dsh-tylina` before switching.
 The bundles use the same `tylina` configuration row and must not be stacked together.
 Custom profiles must contain `@deepseek-ai/dsh-base` and `@deepseek-ai/dsh-web-app` before the Tylina bundle.
 
 There are no install scripts, source-checkout requirements or compiler binary downloads.
-The native tarball preserves executable permissions through pnpm's `publishConfig.executableFiles`.
+The platform runtime tarballs preserve executable permissions through pnpm's `publishConfig.executableFiles`.
 The integration currently targets the released Harness `0.1.2-rc.1` plugin contracts.
 
 ## Ownership
@@ -173,15 +167,17 @@ cases, live-provider acceptance when configured and the broader product acceptan
 
 ## npm distribution
 
-The public package names are `@tylina/dsh-wasm` and `@tylina/dsh-native`; `plugin/` is private
+The public package names are `dsh-tylina` and `dsh-tylina-native`; `plugin/` is private
 implementation shared by the two bundles. Both publish only compiled output and bundled resources,
 with repository metadata, a public access setting and no runtime workspace dependencies.
 `pnpm pack:bundles` and `pnpm verify:packages` are the release gate before publishing a tarball.
 No npm publication happens during build or CI.
 
-The native package currently contains one platform's binaries. Do not publish different architectures
-under the same npm name/version: npm versions are immutable. Before a multi-platform npm release,
-split native binaries into platform-specific packages selected through optional dependencies.
-The current platform-tagged tarballs remain suitable for local Harness installation.
+`dsh-tylina-native` is a universal plugin entry. Its optional dependencies select an independent
+`tylina-native-<platform>-<arch>` package, each restricted by npm `os`/`cpu` metadata. The plugin
+checks the installed runtime identity before launching executables and reports missing dependencies
+or unsupported platforms explicitly. It never launches another platform's binary or downloads executables
+from a mutable URL. Windows runtime packages use `.exe` names; POSIX executables retain execute permission.
+
 Licensing is inherited from Tylina (`UNLICENSED`); third-party notices are included separately.
 Publishing preserves that existing license; it does not change the core source visibility.

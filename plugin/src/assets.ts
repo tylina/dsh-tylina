@@ -10,9 +10,21 @@ const mime: Record<string, string> = {
   '.woff': 'font/woff', '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.otf': 'font/otf', '.zip': 'application/zip'
 }
 
-export async function createAssetHandler(root: string, configuration: { mode: 'wasm' | 'native'; endpoint?: string }) {
-  const directory = await realpath(root)
-  const index = (await readFile(resolve(directory, 'index.html'), 'utf8')).replace('</head>',
+export async function createAssetHandler(root: string, configuration: { mode: 'wasm' | 'native'; endpoint?: string }, additionalRoots: string[] = []) {
+  const directories = await Promise.all([root, ...additionalRoots].map((path) => realpath(path)))
+  const locate = async (name: string) => {
+    for (const directory of directories) {
+      try {
+        const file = await realpath(resolve(directory, name)), path = relative(directory, file)
+        if (isAbsolute(path) || path === '..' || path.startsWith(`..${sep}`)) throw new Error('Outside assets')
+        if ((await stat(file)).isFile()) return file
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT' && (error as NodeJS.ErrnoException).code !== 'ENOTDIR') throw error
+      }
+    }
+    throw new Error('Asset not found')
+  }
+  const index = (await readFile(await locate('index.html'), 'utf8')).replace('</head>',
     `<script type="application/json" id="tylina-host-runtime">${JSON.stringify(configuration).replaceAll('<', '\\u003c')}</script></head>`)
   return async (request: IncomingMessage, response: ServerResponse) => {
     if (request.method !== 'GET' && request.method !== 'HEAD') { response.writeHead(405, { Allow: 'GET, HEAD' }); response.end(); return }
@@ -28,9 +40,7 @@ export async function createAssetHandler(root: string, configuration: { mode: 'w
       response.end(request.method === 'HEAD' ? undefined : index); return
     }
     try {
-      const file = await realpath(resolve(directory, name))
-      const path = relative(directory, file)
-      if (isAbsolute(path) || path === '..' || path.startsWith(`..${sep}`)) throw new Error('Outside assets')
+      const file = await locate(name)
       const info = await stat(file)
       if (!info.isFile()) throw new Error('Not a file')
       response.writeHead(200, { 'Content-Type': mime[extname(file)] ?? 'application/octet-stream',

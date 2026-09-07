@@ -42,11 +42,6 @@
     "@modelcontextprotocol/node": "2.0.0",
     "@modelcontextprotocol/server": "2.0.0",
     "@tabler/icons-react": "3.44.0",
-    "@tylina/agent-tools": "workspace:*",
-    "@tylina/document-intelligence": "workspace:*",
-    "@tylina/editor-host": "workspace:*",
-    "@tylina/embed": "workspace:*",
-    "@tylina/node-runtime": "workspace:*",
     "@types/node": "^26.1.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "18.3.7",
@@ -54,7 +49,9 @@
     "esbuild": "^0.25.0",
     "react": "^18.3.1",
     "react-dom": "18.3.1",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "tylina-sdk": "0.4.0",
+    "tylina-web-assets": "0.4.0"
   },
   "private": true,
   "repository": {

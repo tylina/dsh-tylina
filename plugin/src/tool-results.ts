@@ -1,7 +1,7 @@
 import type { AttachmentStore, ImageMediaType } from '@deepseek-ai/dsh-attachment'
 import type { ContentBlock } from '@deepseek-ai/dsh-llm'
 import type { ToolDefinition } from '@deepseek-ai/dsh-tools'
-import type { ToolResult } from '@tylina/agent-tools/registry'
+import type { ToolResult } from 'tylina-sdk/tools'
 
 interface HarnessToolValue { structuredContent: object | null; content: ContentBlock[] }
 const dimensions = { type: 'object', properties: { width: { type: 'integer' }, height: { type: 'integer' } },

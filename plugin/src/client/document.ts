@@ -1,5 +1,5 @@
-import { createTylinaEditor, type TylinaEditor } from '@tylina/embed'
-import { createWebSocketRuntime } from '@tylina/embed/websocket-runtime'
+import { createTylinaEditor, type TylinaEditor } from 'tylina-sdk/client'
+import { createWebSocketRuntime } from 'tylina-sdk/client'
 import { connectHarnessEditor } from './editor-connection'
 import { decodeWorkspace, encodeWorkspace, type ProjectSnapshot } from '../workspace-wire'
 

@@ -14,7 +14,8 @@ const { registerTylinaSkills } = await import(new URL('../plugin/src/skills.ts',
 test('released Harness discovers all bundled domains and loads their exact bodies with disposable ownership', async () => {
   const ctx = new Context()
   await ctx.plugin(SkillRegistry)
-  const resources = join(root, '.tylina/apps/desktop/resources/skills')
+  const { assetsRoot } = await import('../source.mjs')
+  const resources = join(assetsRoot, 'skills')
   const expected = (await readdir(resources)).filter((name) => name.startsWith('typst-')).sort()
   const owner = ctx.plugin({ inject: ['skills'], apply(ctx) { registerTylinaSkills(ctx, resources) } })
   await owner

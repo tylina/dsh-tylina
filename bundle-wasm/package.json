@@ -1,5 +1,5 @@
 {
-  "name": "@tylina/dsh-wasm",
+  "name": "dsh-tylina",
   "version": "0.4.0",
   "type": "module",
   "license": "UNLICENSED",
@@ -31,7 +31,8 @@
     "@deepseek-ai/dsh-session": "0.1.2-rc.1",
     "@deepseek-ai/dsh-llm": "0.1.2-rc.1",
     "@deepseek-ai/dsh-skill-filesystem": "0.1.2-rc.1",
-    "ws": "^8.18.3"
+    "ws": "^8.18.3",
+    "tylina-web-assets": "0.4.0"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.2"

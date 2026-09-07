@@ -1,9 +1,9 @@
 import type { IncomingMessage } from 'node:http'
 import type { Duplex } from 'node:stream'
 import { WebSocketServer, WebSocket } from 'ws'
-import { createNativeEmbeddingRuntime } from '@tylina/node-runtime/embedding'
-import type { RuntimeRequest } from '@tylina/embed/types'
-import type { LspProcessOptions } from '@tylina/node-runtime/lsp-transport'
+import { createNativeEmbeddingRuntime } from 'tylina-sdk/node'
+import type { RuntimeRequest } from 'tylina-sdk/client'
+import type { LspProcessOptions } from 'tylina-sdk/node'
 
 export function createRuntimeSocket(options: {
   authorize(request: IncomingMessage): number | undefined

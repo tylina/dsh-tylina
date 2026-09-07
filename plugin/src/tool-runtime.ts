@@ -1,12 +1,12 @@
 import { homedir } from 'node:os'
 import { isAbsolute, join } from 'node:path'
 import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
-import { createExecutableInspector, resolveConfiguredExecutable } from '@tylina/node-runtime/executables'
-import { createManagedToolRuntime, resolveInstalledUv, type TylinaToolRuntime } from '@tylina/node-runtime/tool-runtime'
-import { createStandaloneUvInstaller } from '@tylina/node-runtime/uv-installer'
-import type { ToolResult } from '@tylina/agent-tools/registry'
+import { createExecutableInspector, resolveConfiguredExecutable } from 'tylina-sdk/node'
+import { createManagedToolRuntime, resolveInstalledUv, type TylinaToolRuntime } from 'tylina-sdk/node'
+import { createStandaloneUvInstaller } from 'tylina-sdk/node'
+import type { ToolResult } from 'tylina-sdk/tools'
 import type { EditorToolCaller } from './tools'
-import toolNames from '@tylina/editor-host/tylina-mcp-tools.json' with { type: 'json' }
+import toolNames from 'tylina-sdk/tool-names.json' with { type: 'json' }
 
 export function createHarnessToolRuntime(): TylinaToolRuntime {
   const inspect = createExecutableInspector(process.platform)

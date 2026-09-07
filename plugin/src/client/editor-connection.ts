@@ -1,4 +1,4 @@
-import type { TylinaEditor } from '@tylina/embed'
+import type { TylinaEditor } from 'tylina-sdk/client'
 import type { EditorMcpConnection } from '../mcp-wire'
 
 /** Hiding the document retains this connection; only its owner may dispose or bind another session. */

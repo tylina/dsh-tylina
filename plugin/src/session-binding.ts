@@ -1,9 +1,9 @@
 import { createUserMessage, type Message } from '@deepseek-ai/dsh-llm/message'
-import { createTylinaMcpSessionInstructions } from '@tylina/agent-tools/instructions'
-import { loadTylinaMcpCoreSkillInstructions } from '@tylina/agent-tools/node/skills'
+import { createTylinaMcpSessionInstructions } from 'tylina-sdk/tools'
+import { loadTylinaMcpCoreSkillInstructions } from 'tylina-sdk/tools'
 import { registerTylinaEditorTools, type EditorToolCaller } from './tools'
 import type { createHarnessWorkspaces } from './workspaces'
-import type { TylinaToolRuntime } from '@tylina/node-runtime/tool-runtime'
+import type { TylinaToolRuntime } from 'tylina-sdk/node'
 import { withHarnessToolRuntime } from './tool-runtime'
 import type { createHarnessMcpEndpoints } from './mcp'
 

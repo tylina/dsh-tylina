@@ -13,10 +13,7 @@ jobs:
       - uses: pnpm/action-setup@v4
         with:
           version: 11.9.0
-      - name: Prepare pinned private core
-        env:
-          TYLINA_SOURCE_SSH_KEY: ${{ secrets.TYLINA_SOURCE_SSH_KEY }}
-        run: node scripts/prepare-ci-source.mjs
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm test
+      - run: pnpm build:wasm

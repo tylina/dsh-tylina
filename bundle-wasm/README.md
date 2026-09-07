@@ -5,7 +5,7 @@ Typst and Tinymist run in your browser using WebAssembly Workers.
 Requires Node.js 22.19+ and DeepSeek Harness 0.1.2-rc.1.
 
 ```sh
-dsh plugin --profile web add @tylina/dsh-wasm@0.4.0
+dsh plugin --profile web add dsh-tylina@0.4.0
 dsh --profile web
 ```
 

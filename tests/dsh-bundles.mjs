@@ -4,7 +4,7 @@ import { once } from 'node:events'
 import { access, cp, mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { constants } from 'node:fs'
 import { createRequire } from 'node:module'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 
@@ -25,13 +25,14 @@ await mkdir(join(root, '.benchmarks'), { recursive: true })
 
 for (const mode of modes) {
   assert.ok(['wasm', 'native'].includes(mode))
+  const packageName = mode === 'wasm' ? 'dsh-tylina' : 'dsh-tylina-native'
   const home = await mkdtemp(join(root, `.benchmarks/dsh-${mode}-`))
   const env = { ...process.env, DSH_HOME: home }
   const project = join(home, 'project')
   await mkdir(project)
   const source = '#let title="Tylina in dsh"\r\n= #title\r\n\r\nHello 世界'
   await writeFile(join(project, 'Plugin.typ'), source)
-  const archive = join(root, `release/tylina-dsh-${mode}-${version}.tgz`)
+  const archive = join(root, `release/${packageName}-${version}.tgz`)
   await access(archive)
   await run('dsh', ['plugin', '--profile', 'tylina', 'add', archive, ...installOptions], { env, maxBuffer: 2 ** 20 })
   const probe = join(home, 'probe')
@@ -46,11 +47,13 @@ for (const mode of modes) {
   await run('dsh', ['plugin', '--profile', 'tylina', 'add', join(home, 'tylina-acceptance-probe-1.0.0.tgz'), ...installOptions], { env, maxBuffer: 2 ** 20 })
   const profile = join(home, 'profiles/tylina/package.json')
   const manifest = JSON.parse(await readFile(profile, 'utf8'))
-  manifest.dsh.profile.bundles = ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app', `@tylina/dsh-${mode}`, 'tylina-acceptance-probe']
+  manifest.dsh.profile.bundles = ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app', packageName, 'tylina-acceptance-probe']
   await writeFile(profile, JSON.stringify(manifest, null, 2) + '\n')
   if (mode === 'native' && process.platform !== 'win32') {
+    const runtimeRequire = createRequire(join(home, 'profiles/tylina/node_modules/dsh-tylina-native/package.json'))
+    const runtimeRoot = dirname(runtimeRequire.resolve(`tylina-native-${process.platform}-${process.arch}/package.json`))
     for (const name of ['tinymist', 'tylina-tinymist']) {
-      await access(join(home, `profiles/tylina/node_modules/@tylina/dsh-native/runtime/${name}`), constants.X_OK)
+      await access(join(runtimeRoot, 'runtime', name), constants.X_OK)
     }
   }
   const server = spawn('dsh', ['--profile', 'tylina', '--host', '127.0.0.1', '--port', '0', '--no-open'], { env, cwd: project, stdio: ['ignore', 'pipe', 'pipe'] })

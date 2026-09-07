@@ -175,8 +175,10 @@ With the matching candidate SDK installed, run
 `TYLINA_TEST_SIDECAR=/absolute/path/to/tylina-tinymist pnpm test:runtime` for native cancellation.
 This uses the real release sidecar over an authenticated WebSocket: cancelling a command stops that
 engine's pending work, preserves the independent preview engine, and allows the next command to start
-fresh. It also checks completed signals and connection disposal. Native LSP in-flight cancellation
-remains separate work; this test does not claim to cover it.
+fresh. It also checks completed signals and connection disposal. The candidate SDK also forwards
+native LSP cancellation and emits a reset notification so the editor rebuilds its source mirrors.
+Tylina's `embedding-cancellation.pw.ts` exercises this through the real plugin socket and embedded
+editor, including subsequent input and completion. The socket-only runtime test does not cover LSP.
 
 `node --test tests/dsh-workspaces.mjs` checks provider mapping and authenticated HTTP project access
 against the released Harness filesystem. The installed acceptance suite checks actual disk publication

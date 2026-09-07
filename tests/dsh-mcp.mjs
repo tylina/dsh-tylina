@@ -1,3 +1,6 @@
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
+import { commandInput } from './command-input.mjs'
 import assert from 'node:assert/strict'
 import { once } from 'node:events'
 import { mkdir, mkdtemp, rm } from 'node:fs/promises'
@@ -32,6 +35,8 @@ async function connect(origin, connection, mode) {
   await client.connect(new StreamableHTTPClientTransport(new URL(connection.path, origin), {
     requestInit: { headers: { Authorization: `Bearer ${connection.token}` } }
   }))
+  const originalCall = client.callTool.bind(client)
+  client.callTool = ({ name, arguments: args }, ...rest) => originalCall(commandInput(name, args), ...rest)
   return client
 }
 
@@ -59,9 +64,10 @@ test(`${mode}: real HTTP MCP discovers the shared tools, instructions and images
     client = await connect(env.origin, bound.connection, mode)
     assert.match(client.getInstructions(), /Shared Typst/)
     const { tools } = await client.listTools()
-    assert.equal(tools.length, 18)
-    assert.ok(tools.some((tool) => tool.name === 'tylina_read_skill_resource'))
-    assert.ok(tools.some((tool) => tool.name === 'tylina_write_file' && tool.inputSchema.required.includes('expectedSha256')))
+    assert.equal(tools.length, 1)
+    assert.equal(tools[0].name, 'tylina')
+    const help = await client.callTool({ name: 'tylina', arguments: { command: 'help', args: { command: 'file.write' } } })
+    assert.ok(help.structuredContent.inputSchema.required.includes('expectedSha256'))
     const result = await client.callTool({ name: 'tylina_render_page', arguments: { page: 1 } })
     assert.equal(result.structuredContent.project, 'bound-project')
     assert.equal(result.content[1].mimeType, 'image/png')
@@ -108,3 +114,26 @@ test(`${mode}: HTTP cancellation and editor expiry reach actual pending work wit
   } finally { work.resolve(); await client?.close(); await bound.dispose(); await env.dispose() }
 })
 }
+
+
+test('SDK CLI uses the same authenticated command protocol and preserves failure exit status',
+  { skip: !process.env.TYLINA_SDK_CLI }, async () => {
+    const env = await setup()
+    const calls = []
+    const bound = env.host.open(async (name, input) => {
+      calls.push({ name, input })
+      return { structuredContent: { received: input }, content: [{ type: 'text', text: JSON.stringify(input) }] }
+    }, '', new AbortController().signal)
+    const run = promisify(execFile)
+    const options = { env: { ...process.env, TYLINA_MCP_URL: new URL(bound.connection.path, env.origin).href,
+      TYLINA_MCP_TOKEN: bound.connection.token }, timeout: 20_000 }
+    try {
+      const help = await run(process.execPath, [process.env.TYLINA_SDK_CLI, 'help'], options)
+      assert.ok(JSON.parse(help.stdout).structuredContent.commands.some((item) => item.command === 'editor.state'))
+      const read = await run(process.execPath, [process.env.TYLINA_SDK_CLI, 'file.read', '--args', JSON.stringify({ file: 'notes.typ' })], options)
+      assert.equal(JSON.parse(read.stdout).structuredContent.received.file, 'notes.typ')
+      assert.equal(calls.at(-1).name, 'tylina_read_file')
+      await assert.rejects(run(process.execPath, [process.env.TYLINA_SDK_CLI, 'file.edit', '--args', '{}'], options), (error) => error.code === 1)
+      assert.equal(calls.length, 1, 'invalid CLI writes never reach the editor')
+    } finally { await bound.dispose(); await env.dispose() }
+  })

@@ -105,7 +105,7 @@ Every editor connection owns independent preview, command and language-service s
 Disposing the editor destroys its native sessions. A tool socket disconnect rejects pending calls while preserving
 the document; “Reconnect Agent tools” explicitly restores tool registration without replaying previous calls.
 
-The bound Agent receives the shared 18-tool catalog, including current unsaved file reads, version-checked writes,
+The bound Agent receives one shared `tylina` command tool. `help` discovers operations and their schemas, including current unsaved file reads, version-checked writes,
 Typst validation, semantic document queries, templates, Skills and actual rendered image attachments.
 The ordinary Harness Agent owns model configuration, keys and chat. Opening a document queues the shared authoring
 instructions but does not start inference. Tool registration is session scoped and exclusively owned by one editor.
@@ -120,7 +120,7 @@ Use the normal Harness authenticated URL to log in before opening `/tylina/` dir
 ## MCP clients
 
 The plug icon in the document header opens **Connect an MCP client**. Copy the configuration into a
-Streamable HTTP MCP client to use the same 18 live document tools and authoring instructions.
+Streamable HTTP MCP client to use the same live document commands and authoring instructions.
 Harness already receives these tools directly; this connection is for another client and does not duplicate
 the Harness Agent's tool catalog. Tools read the live editor, retain version-checked file writes and Undo,
 and use the same compiler, templates and packaged Skills as the ordinary Harness tools.
@@ -167,7 +167,7 @@ schema rejection and cancellation. Bundles include notices for the server depend
 `node --test tests/dsh-skills.mjs` also checks discovery, exact bodies and disposal
 against the real released Cordis and Skill registry.
 `node --test tests/dsh-tools.mjs tests/dsh-editor-connection.mjs`
-checks the shared 18-tool catalog against the released Harness registry and the authenticated editor
+checks one shared `tylina` command tool against the released Harness registry and the authenticated editor
 connection over real sockets, including session isolation, cancellation and teardown. These boundary
 tests do not invoke a model or prove the installed Agent loop.
 

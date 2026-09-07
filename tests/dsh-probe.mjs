@@ -1,3 +1,4 @@
+import { commandInput } from './command-input.mjs'
 /** Installed only by dsh-bundles.mjs in its isolated, loopback acceptance profile. */
 import { createUserMessage } from '@deepseek-ai/dsh-llm/message'
 import { createModelFixture } from './dsh-model-fixture.mjs'
@@ -58,7 +59,7 @@ export function apply(ctx) {
         : input.action === 'catalog' ? ctx.tools.schemas(agent) : input.action === 'instructions'
         ? { pending: agent.inbox.nextStep.filter(tylinaContext), recorded: agent.session.snapshotEvents()
           .filter((event) => event.type === 'user/message' && tylinaContext(event.data)).map((event) => event.data), status: agent.status }
-        : await ctx.tools.execute({ agent, name: input.name, arguments: input.input ?? {}, signal: new AbortController().signal,
+        : await ctx.tools.execute({ agent, ...commandInput(input.name, input.input ?? {}), signal: new AbortController().signal,
           callId: `tylina-acceptance-${++sequence}` })
       response.writeHead(200, { 'Content-Type': 'application/json' }); response.end(JSON.stringify(value))
     } catch (error) { response.writeHead(400, { 'Content-Type': 'application/json' }); response.end(JSON.stringify({ error: error.message })) }

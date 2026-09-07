@@ -52,6 +52,8 @@ for (const mode of modes) {
   await mkdir(probe)
   await cp(join(root, 'tests/dsh-probe.mjs'), join(probe, 'index.mjs'))
   await cp(join(root, 'tests/dsh-model-fixture.mjs'), join(probe, 'dsh-model-fixture.mjs'))
+  await createRequire(join(root, 'plugin/package.json'))('esbuild').build({ entryPoints: [join(root, 'tests/command-input.mjs')],
+    outfile: join(probe, 'command-input.mjs'), bundle: true, platform: 'node', format: 'esm', target: 'node22' })
   await writeFile(join(probe, 'package.json'), JSON.stringify({ name: 'tylina-acceptance-probe', version: '1.0.0', type: 'module',
     dependencies: { '@deepseek-ai/dsh-llm': '0.1.2-rc.1' },
     exports: './index.mjs', dsh: { bundle: { patch: './cordis.patch.yml' } } }))
@@ -187,7 +189,7 @@ for (const mode of modes) {
       if (!response.ok) throw new Error(await response.text())
       return response.json()
     }, { sessionId, ...input })
-    await expect.poll(async () => (await probeRequest({ action: 'catalog' })).filter((tool) => tool.name.startsWith('tylina_')).length).toBe(18)
+    await expect.poll(async () => (await probeRequest({ action: 'catalog' })).filter((tool) => tool.name === 'tylina').length).toBe(1)
     const validated = await probeRequest({ name: 'tylina_validate_document' })
     assert.equal(validated.isError, false)
     assert.equal(validated.value.structuredContent.valid, true)
@@ -210,6 +212,12 @@ for (const mode of modes) {
     await menu('Edit', 'Redo'); await expect.poll(readMain).toBe(formatted)
     await frame.getByRole('button', { name: 'Split', exact: true }).click()
     await frame.getByTestId('monaco-source-editor').click({ position: { x: 180, y: 12 } })
+    await page.keyboard.press('ControlOrMeta+a')
+    const selection = (await probeRequest({ name: 'tylina', input: { command: 'editor.state' } })).value.structuredContent
+    assert.equal(selection.surface, 'source')
+    assert.equal(selection.selection.text, formatted)
+    assert.equal(selection.selection.file, 'Plugin.typ')
+    assert.equal(selection.selection.kind, 'source')
     await page.keyboard.press(process.platform === 'darwin' ? 'Meta+ArrowDown' : 'Control+End')
     const edited = formatted + ' updated'
     await page.keyboard.insertText(' updated')
@@ -263,7 +271,7 @@ for (const mode of modes) {
     await expect(frame.locator('.typst-doc')).toBeVisible()
     await expect(frame.locator('.web-document-title')).toHaveText('project')
     assert.deepEqual(errors, [])
-    await expect.poll(async () => (await probeRequest({ action: 'catalog' })).filter((tool) => tool.name.startsWith('tylina_')).length).toBe(18)
+    await expect.poll(async () => (await probeRequest({ action: 'catalog' })).filter((tool) => tool.name === 'tylina').length).toBe(1)
     const instructions = await probeRequest({ action: 'instructions' })
     assert.equal([...instructions.pending, ...instructions.recorded].filter((message) => message.source.form === 'instructions').length, 1)
     assert.equal(instructions.status, 'idle', 'opening a document does not start an inference task')

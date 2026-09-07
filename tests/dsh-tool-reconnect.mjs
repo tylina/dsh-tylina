@@ -55,7 +55,7 @@ export async function verifyToolReconnect({ page, frame, root, mode, readMain, p
   assert.equal((await result).isError, true, 'the cancelled tool cannot report a successful edit')
   await expect(page.getByRole('button', { name: /^(重新连接 Agent 工具|Reconnect Agent tools)$/u })).toBeEnabled()
   assert.equal(editorSockets.length, connections + 1)
-  await expect.poll(async () => (await probeRequest({ action: 'catalog' })).filter((tool) => tool.name.startsWith('tylina_')).length).toBe(18)
+  await expect.poll(async () => (await probeRequest({ action: 'catalog' })).filter((tool) => tool.name === 'tylina').length).toBe(1)
   const current = (await probeRequest({ name: 'tylina_read_file', input: { file: 'Plugin.typ' } })).value.structuredContent
   assert.equal(current.text, original + ' Pending user save. Input stays responsive.')
   await expect.poll(readMain).toBe(current.text)

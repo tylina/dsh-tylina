@@ -92,8 +92,8 @@ export async function verifyDock({ page, frame, iframe, context, root, mode, rea
   const detached = popup.frameLocator('iframe')
   await expect(detached.locator('.typst-doc')).toBeVisible({ timeout: 30_000 })
   await expect(detached.locator('.web-document-title')).toHaveText('project')
-  const toolCount = async () => (await probeRequest({ action: 'catalog' })).filter((tool) => tool.name.startsWith('tylina_')).length
-  await expect.poll(toolCount).toBe(18)
+  const toolCount = async () => (await probeRequest({ action: 'catalog' })).filter((tool) => tool.name === 'tylina').length
+  await expect.poll(toolCount).toBe(1)
   const read = (await probeRequest({ name: 'tylina_read_file', input: { file: 'Plugin.typ' } })).value.structuredContent
   assert.equal(read.text, external)
   const text = external + '\r\n\r\nEdited in a separate window.'
@@ -105,7 +105,7 @@ export async function verifyDock({ page, frame, iframe, context, root, mode, rea
   await popup.getByRole('button', { name: /^(返回侧边栏|Return to sidebar)$/u }).click()
   await expect.poll(() => popup.isClosed()).toBe(true)
   await expect(frame.locator('.typst-doc')).toBeVisible({ timeout: 30_000 })
-  await expect.poll(toolCount).toBe(18)
+  await expect.poll(toolCount).toBe(1)
   await expect.poll(readMain).toBe(text)
   const latest = (await probeRequest({ name: 'tylina_read_file', input: { file: 'Plugin.typ' } })).value.structuredContent
   assert.equal(latest.text, text)

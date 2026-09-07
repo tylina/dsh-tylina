@@ -2,8 +2,7 @@ import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { createMcpHandler, fromJsonSchema, isLegacyRequest, McpServer, type JsonSchemaType } from '@modelcontextprotocol/server'
 import { toNodeHandler, toWebRequest } from '@modelcontextprotocol/node'
-import { createTylinaToolDefinitions } from 'tylina-sdk/tools'
-import { createWorkspaceFileToolDefinitions } from 'tylina-sdk/tools'
+import { createHarnessCommands } from './commands'
 import type { EditorToolCaller } from './tools'
 import { createLegacyMcpSessions } from './mcp-legacy'
 
@@ -12,7 +11,7 @@ export function createHarnessMcpEndpoints(options: {
   requestRejection(request: IncomingMessage): number | undefined
   version: string
 }) {
-  const schemas = [...createTylinaToolDefinitions(), ...createWorkspaceFileToolDefinitions()]
+  const schemas = createHarnessCommands(async () => { throw new Error('An editor is required') }).definitions()
     .map((tool) => ({ ...tool, schema: fromJsonSchema<Record<string, unknown>>(tool.inputSchema as JsonSchemaType) }))
   const endpoints = new Map<string, {
     token: Buffer; fetch: ReturnType<typeof createMcpHandler>['fetch']; close(): Promise<void>; active: Set<AbortController>
@@ -22,6 +21,7 @@ export function createHarnessMcpEndpoints(options: {
   let requests = 0
   return {
     open(call: EditorToolCaller, instructions: string, lifetime: AbortSignal) {
+      const commands = createHarnessCommands(call)
       lifetime.throwIfAborted()
       if (disposed) throw new Error('The Tylina MCP host is closed')
       const connection = { path: `/tylina/mcp/${randomUUID()}`, token: randomBytes(32).toString('base64url') }
@@ -31,8 +31,8 @@ export function createHarnessMcpEndpoints(options: {
           description: tool.description, annotations: tool.annotations, inputSchema: tool.schema
         }, async (input, context) => {
           try {
-            const result = await call(tool.name, input,
-              AbortSignal.any([lifetime, context.mcpReq.signal, ...(httpSignal ? [httpSignal] : [])]))
+            const result = await commands.call(tool.name, input, {
+              signal: AbortSignal.any([lifetime, context.mcpReq.signal, ...(httpSignal ? [httpSignal] : [])]) })
             return { ...result, structuredContent: result.structuredContent as Record<string, unknown> | undefined }
           } catch (error) {
             return { isError: true, content: [{ type: 'text' as const, text: error instanceof Error ? error.message : 'The document tool failed' }] }

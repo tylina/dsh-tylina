@@ -1,3 +1,4 @@
+import { commandInput } from './command-input.mjs'
 import assert from 'node:assert/strict'
 import { LlmAdapter } from '@deepseek-ai/dsh-llm'
 
@@ -31,9 +32,9 @@ export function createModelFixture(ctx) {
         }
         const cores = options.messages.filter((message) => message.source.kind === 'plugin' &&
           message.source.plugin === 'tylina' && message.source.form === 'instructions')
-        run.requests.push({ instructions: cores.length, tools: options.tools.filter((tool) => tool.name.startsWith('tylina_')).length })
+        run.requests.push({ instructions: cores.length, tools: options.tools.filter((tool) => tool.name === 'tylina').length })
         assert.equal(cores.length, 1, 'the current model context retains exactly one Tylina authoring contract')
-        assert.equal(run.requests.at(-1).tools, 18)
+        assert.equal(run.requests.at(-1).tools, 1)
         let prior
         if (run.lastCall) {
           prior = options.messages.flatMap((message) => message.content)
@@ -67,6 +68,8 @@ export function createModelFixture(ctx) {
             return
         }
         run.lastCall = `tylina-model-${++sequence}`
+        const request = commandInput(name, input)
+        name = request.name; input = request.arguments
         const args = JSON.stringify(input)
         yield { type: 'block-start', index: 0, blockType: 'tool-call' }
         yield { type: 'tool-call-delta', index: 0, id: run.lastCall, name, argumentsDelta: args }

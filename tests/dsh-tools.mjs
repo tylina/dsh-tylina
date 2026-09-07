@@ -1,3 +1,4 @@
+import { commandInput } from './command-input.mjs'
 import assert from 'node:assert/strict'
 import { mkdir, mkdtemp, rm } from 'node:fs/promises'
 import { createRequire } from 'node:module'
@@ -38,7 +39,7 @@ async function setup() {
   await ctx.plugin(AttachmentOwner)
   let callId = 0
   const run = (agent, name, input = {}, signal = new AbortController().signal) => ctx.tools.execute({
-    agent, name, arguments: input, signal, callId: ToolCallId(`tylina-test-${++callId}`)
+    agent, ...commandInput(name, input), signal, callId: ToolCallId(`tylina-test-${++callId}`)
   })
   return { ctx, run }
 }
@@ -61,7 +62,7 @@ test('released Harness scopes share the complete catalog and keep each tool boun
   } })
   await owner
   try {
-    assert.equal(ctx.tools.schemas(alpha).length, 18)
+    assert.equal(ctx.tools.schemas(alpha).length, 1)
     assert.equal(ctx.tools.schemas().length, 0)
     const first = await run(alpha, 'tylina_read_file', { file: 'main.typ' })
     const second = await run(beta, 'tylina_validate_document')
@@ -74,7 +75,7 @@ test('released Harness scopes share the complete catalog and keep each tool boun
     releaseAlpha()
     assert.equal(ctx.tools.schemas(alpha).length, 0)
     assert.equal((await run(alpha, 'tylina_read_file')).isError, true)
-    assert.equal((await run(beta, 'tylina_read_file')).isError, false)
+    assert.equal((await run(beta, 'tylina_read_file', { file: 'main.typ' })).isError, false)
     releaseBeta()
   } finally { await ctx.fiber.dispose() }
 })
@@ -110,7 +111,7 @@ test('Harness owns image persistence, tool failures, cancellation and disposable
     pending = new Promise((resolve) => { release = resolve })
     const abort = new AbortController()
     let settled = false
-    const cancelled = run(agent, 'tylina_write_file', {}, abort.signal).finally(() => { settled = true })
+    const cancelled = run(agent, 'tylina_write_file', { file: 'main.typ', contents: 'pending', expectedSha256: null }, abort.signal).finally(() => { settled = true })
     await new Promise((resolve) => setImmediate(resolve))
     abort.abort(new Error('User cancelled'))
     assert.equal(activeSignal.aborted, true)

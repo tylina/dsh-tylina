@@ -1,8 +1,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-attachment'
-import { createTylinaToolDefinitions } from 'tylina-sdk/tools'
-import { createWorkspaceFileToolDefinitions } from 'tylina-sdk/tools'
+import { createHarnessCommands } from './commands'
 import type { ToolResult } from 'tylina-sdk/tools'
 import { admitTylinaToolResult, tylinaToolOutput } from './tool-results'
 
@@ -14,13 +13,14 @@ export function registerTylinaEditorTools(ctx: Context, sessionId: string, call:
   let active = true
   const stop = () => { active = false; dispose.splice(0).reverse().forEach((release) => release()) }
   try {
-    for (const tool of [...createTylinaToolDefinitions(), ...createWorkspaceFileToolDefinitions()]) {
+    const commands = createHarnessCommands(call)
+    for (const tool of commands.definitions()) {
       dispose.push(ctx.tools.register({ name: tool.name, description: tool.description, parameters: tool.inputSchema,
         output: tylinaToolOutput,
         async execute(input, exec) {
           exec.signal.throwIfAborted()
           if (!active || exec.agent?.id !== sessionId) throw new Error('This Tylina editor is not connected to the calling Harness session')
-          const result = await call(tool.name, input, exec.signal)
+          const result = await commands.call(tool.name, input, { signal: exec.signal })
           return admitTylinaToolResult(ctx.attachments, result, exec.signal)
         }
       }))

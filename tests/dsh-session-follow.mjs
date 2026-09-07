@@ -27,8 +27,8 @@ export async function verifySessionFollowing({ page, frame, home, probeRequest, 
   await expect(frame.locator('.web-document-title')).toHaveText('second-project')
   await expect(frame.locator('.typst-doc')).toBeVisible()
   const count = async (sessionId) => (await probeRequest({ action: 'catalog', ...(sessionId && { sessionId }) }))
-    .filter((tool) => tool.name.startsWith('tylina_')).length
-  await expect.poll(() => count(second.sessionId)).toBe(18)
+    .filter((tool) => tool.name === 'tylina').length
+  await expect.poll(() => count(second.sessionId)).toBe(1)
   await expect.poll(() => count()).toBe(0)
   await expect(page.locator('.tylina-dsh-error')).toHaveCount(0)
   await expect(page.locator('.tylina-dsh-bar .tylina-dsh-brand img')).toHaveCount(0)
@@ -40,7 +40,7 @@ export async function verifySessionFollowing({ page, frame, home, probeRequest, 
   await open.click()
   await expect(frame.locator('.web-document-title')).toHaveText('project', { timeout: 30_000 })
   await expect(frame.locator('.typst-doc')).toBeVisible()
-  await expect.poll(() => count()).toBe(18)
+  await expect.poll(() => count()).toBe(1)
   await expect.poll(() => count(second.sessionId)).toBe(0)
   await expect(page.locator('.tylina-dsh-error')).toHaveCount(0)
   await expect.poll(readMain).toBe(external)

@@ -1,3 +1,4 @@
+import { commandInput } from './command-input.mjs'
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
@@ -26,9 +27,9 @@ export async function verifyInstalledMcp({ page, frame, root, project, readMain,
   try {
     await client.connect(new StreamableHTTPClientTransport(new URL(configuration.url), { requestInit: { headers: configuration.headers } }))
     const catalog = await client.listTools()
-    assert.equal(catalog.tools.length, 18)
+    assert.equal(catalog.tools.length, 1)
     assert.match(client.getInstructions(), /session-scoped Typst authoring contract/)
-    const call = (name, args = {}) => client.callTool({ name, arguments: args })
+    const call = (name, args = {}) => client.callTool(commandInput(name, args))
     const info = (await call('tylina_workspace_info')).structuredContent
     assert.equal(info.root, project)
     const read = (await call('tylina_read_file', { file: 'Plugin.typ' })).structuredContent

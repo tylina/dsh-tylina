@@ -1,6 +1,6 @@
 import { realpath } from 'node:fs/promises'
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { isAbsolute } from 'node:path'
+import { isAbsolute, relative, sep, extname } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import type { FileSystem } from '@deepseek-ai/dsh-fs'
 import type {} from '@deepseek-ai/dsh-api-session-controller'
@@ -38,7 +38,7 @@ export function createHarnessWorkspaces(ctx: Context, mode: 'wasm' | 'native') {
     const { agent } = result
     const path = await withAgentServices(agent, ['fs'], (context) =>
       resolveHarnessProject(context.fs, agent.session.header.cwd ?? '', project, signal))
-    return { store: await pool.get(path), agent }
+    return { store: await pool.get(path), agent, path }
   }
   return {
     resolve,
@@ -55,10 +55,21 @@ export function createHarnessWorkspaces(ctx: Context, mode: 'wasm' | 'native') {
           response.writeHead(403); response.end(); return
         }
         const url = new URL(request.url ?? '/', 'http://localhost')
-        const { store } = await resolve(url.searchParams.get('session') ?? '', url.searchParams.get('project') ?? '', abort.signal)
+        const { store, path } = await resolve(url.searchParams.get('session') ?? '', url.searchParams.get('project') ?? '', abort.signal)
         let result: unknown
         if (request.method === 'GET') {
-          const snapshot = await store.readIfChanged(request.headers['if-none-match'], { mainFile: url.searchParams.get('main'), activeFile: url.searchParams.get('file') })
+          const entry = url.searchParams.get('entry')
+          let mainFile = url.searchParams.get('main'), activeFile = url.searchParams.get('file')
+          if (entry !== null) {
+            if (!entry || entry.length > 4096) throw new Error('Invalid document path')
+            const portable = isAbsolute(entry) ? relative(path, entry).split(sep).join('/') : entry
+            const file = requireWorkspaceRelativePath(portable)
+            if (extname(file).toLowerCase() !== '.typ') throw new Error('Choose a Typst document')
+            await checkWorkspacePath(path, file)
+            mainFile = activeFile = file
+          }
+          const snapshot = await store.readIfChanged(request.headers['if-none-match'], { mainFile, activeFile })
+          if (entry !== null && snapshot && !(mainFile! in snapshot.workspace.files)) throw new Error('Document does not exist in this workspace')
           if (!snapshot) { response.writeHead(304); response.end(); return }
           response.setHeader('ETag', `"${snapshot.revision}"`)
           result = { ...snapshot, mode, workspace: encodeWorkspace(snapshot.workspace) }

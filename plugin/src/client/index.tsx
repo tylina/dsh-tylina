@@ -10,6 +10,9 @@ import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-api-session-controller/client'
 import { openHarnessDocument, prepareHarnessProject, type HarnessDocument } from './document'
 import { css } from './styles'
+import { ProjectPicker } from './project-picker'
+import { BetterSidebarIntegration, registerBetterSidebar } from './better-sidebar'
+import { TylinaBrand, WebEditorLink } from './brand'
 
 import { en, zh } from './locale'
 import { DockResize, useDocumentDock } from './dock'
@@ -20,20 +23,26 @@ import { ensureHarnessWorkspace } from './workspace'
 import { McpConnectionButton } from './mcp-connection'
 import { useToolReconnect } from './use-tool-reconnect'
 
-type Props = PropsRuntime<'sidebar.footer.action'> & PropsLocale<'tylina'> & { ctx: Context }
-interface Project { sessionId: SessionId; project: string }
+type Props = PropsRuntime<'sidebar.footer.action'> & PropsLocale<'tylina'> & { ctx: Context; integration: BetterSidebarIntegration }
+interface Project { sessionId: SessionId; project: string; entry?: string }
 
-function EditorAction({ ctx, wide, t }: Props) {
+function EditorAction({ ctx, wide, t, integration }: Props) {
   const launcher = useRef<HTMLButtonElement>(null), hideButton = useRef<HTMLButtonElement>(null)
   const container = useRef<HTMLDivElement>(null), floating = useRef<ProjectWindow | undefined>(undefined)
   const [visible, setVisible] = useState(false)
-  const dock = useDocumentDock(visible)
+  const sidebar = useSyncExternalStore(integration.subscribe, integration.getSnapshot)
+  integration.title = () => t('title')
+  integration.openLabel = () => t('open')
   const currentDocument = useRef<HarnessDocument | undefined>(undefined)
   const alive = useRef(true), opening = useRef(false)
   const sessions = useSyncExternalStore(ctx.sessions.list.subscribe, ctx.sessions.list.getSnapshot)
+  const shown = sidebar.embedded ? sidebar.visible : visible && (!sidebar.available || !sessions.ids.length)
+  const dock = useDocumentDock(shown && !sidebar.embedded)
+  useEffect(() => { if (sidebar.embedded) setVisible(sidebar.visible) }, [sidebar.embedded, sidebar.visible])
   const [selection, setSelection] = useState<Project | undefined>()
   const [selectedId, setSelectedId] = useState<SessionId | ''>('')
   const [project, setProject] = useState('')
+  useEffect(() => { if (!selection && sidebar.sessionId) setSelectedId(sidebar.sessionId as SessionId) }, [selection, sidebar.sessionId])
   const [changing, setChanging] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()
@@ -46,9 +55,13 @@ function EditorAction({ ctx, wide, t }: Props) {
     void ctx.sessions.refresh().catch(report)
     if (!selection) setSelectedId(sessions.current ?? sessions.ids[0] ?? '')
     setVisible(true)
+    if (sidebar.available) {
+      const id = sessions.current ?? sessions.ids[0]
+      if (id) { ctx.sessions.open(id); integration.open(id) }
+    }
     requestAnimationFrame(() => hideButton.current?.focus())
   }
-  const hide = () => { setVisible(false); requestAnimationFrame(() => launcher.current?.focus()) }
+  const hide = () => { integration.hide(); setVisible(false); requestAnimationFrame(() => launcher.current?.focus()) }
   const focusChat = (id: SessionId) => { ctx.sessions.open(id); if (window.innerWidth < 900) hide() }
   const open = async (next: Project = { sessionId: selectedId as SessionId, project: project.trim() }, selectConversation = true) => {
     if (opening.current || !container.current || !next.sessionId || !ctx.sessions.list.getSnapshot().byId[next.sessionId]) return new Error(t('noSession'))
@@ -74,15 +87,21 @@ function EditorAction({ ctx, wide, t }: Props) {
     }
     finally { opening.current = false; if (alive.current) setBusy(false) }
   }
+  integration.onFileOpen = (sessionId, entry) => {
+    const id = sessionId as SessionId
+    if (floating.current) { floating.current.focus(); return }
+    ctx.sessions.open(id); integration.open(id); setVisible(true)
+    void open({ sessionId: id, project: '', entry }, false)
+  }
   useEffect(() => {
-    const id = sessions.current
+    const id = (sidebar.sessionId as SessionId | undefined) ?? sessions.current
     if (!selection || !id || busy || changing || floating.current) return
     if (id === selection.sessionId) { followedSession.current = null; return }
     if (followedSession.current === id) return
     followedSession.current = id
     setSelectedId(id); setProject(''); setChanging(true)
     void open({ sessionId: id, project: '' }, false)
-  }, [sessions.current, selection, busy, changing])
+  }, [sessions.current, sidebar.sessionId, selection, busy, changing])
   const launcherOptions: ProjectLauncherOptions = { t, onError: report,
     async restore(project) {
       await ctx.sessions.refresh()
@@ -91,6 +110,7 @@ function EditorAction({ ctx, wide, t }: Props) {
       const error = await open({ ...project, sessionId: project.sessionId as SessionId })
       if (error) { setVisible(false); throw error }
       floating.current = undefined
+      if (sidebar.available) integration.open(project.sessionId)
     },
     async chat(project) {
       await ctx.sessions.refresh()
@@ -117,7 +137,7 @@ function EditorAction({ ctx, wide, t }: Props) {
             if (!await currentDocument.current?.editor.save()) throw new Error(t('saveFailed'))
             remember()
             currentDocument.current?.dispose(); currentDocument.current = undefined
-            setVisible(false)
+            integration.hide(); setVisible(false)
           } catch (error) { floating.current = undefined; report(error as Error); throw error }
           finally { if (alive.current) setBusy(false) }
         }
@@ -126,19 +146,19 @@ function EditorAction({ ctx, wide, t }: Props) {
   }
   return <>
     <button ref={launcher} type="button" className="tylina-dsh-open" title={t('open')} aria-label={t('open')}
-      aria-expanded={visible} aria-controls="tylina-dsh-editor-panel" onClick={() => visible ? hide() : show()}>
+      aria-expanded={shown} aria-controls="tylina-dsh-editor-panel" onClick={() => shown ? hide() : show()}>
       <img src="/tylina/favicon.svg" width="20" height="20" alt="" />{wide && <span>{t('title')}</span>}
     </button>
-    {createPortal(<aside id="tylina-dsh-editor-panel" className="tylina-dsh-panel" aria-label={t('title')} hidden={!visible}
-      role={dock.narrow ? 'dialog' : 'complementary'} aria-modal={dock.narrow || undefined}
-      style={{ width: dock.width }} onKeyDown={(event) => {
+    {createPortal(<aside id="tylina-dsh-editor-panel" className={`tylina-dsh-panel${sidebar.embedded ? ' tylina-dsh-panel-embedded' : ''}`} aria-label={t('title')} hidden={!shown}
+      role={dock.narrow && !sidebar.embedded ? 'dialog' : 'complementary'} aria-modal={!sidebar.embedded && dock.narrow || undefined}
+      style={{ width: sidebar.embedded ? '100%' : dock.width }} onKeyDown={(event) => {
         if (event.key === 'Escape' && !event.defaultPrevented) { event.preventDefault(); hide() }
       }}>
-      {!dock.narrow && <DockResize width={dock.width} update={dock.update} label={t('resize')} />}
+      {!sidebar.embedded && !dock.narrow && <DockResize width={dock.width} update={dock.update} label={t('resize')} />}
       <div className="tylina-dsh-bar">
-        <strong>{t('title')}</strong>
+        {!sidebar.embedded && <TylinaBrand t={t} />}
         <span className="tylina-dsh-session" title={selection && sessions.byId[selection.sessionId]?.cwd}>
-          {selection && (sessions.byId[selection.sessionId]?.displayTitle ?? selection.sessionId)}
+          {!sidebar.embedded && selection && (sessions.byId[selection.sessionId]?.displayTitle ?? selection.sessionId)}
         </span>
         {selection && <>
           <McpConnectionButton getDocument={() => currentDocument.current} t={t} disabled={busy || changing || toolConnection.busy} />
@@ -152,46 +172,36 @@ function EditorAction({ ctx, wide, t }: Props) {
             disabled={busy || toolConnection.busy} onClick={toolConnection.reconnect}><IconRefresh size={16} /></button>
           <button type="button" title={t('chat')} aria-label={t('chat')}
             onClick={() => focusChat(selection.sessionId)}><IconMessageCircle size={16} /></button>
-          <button type="button" title={t('popout')} aria-label={t('popout')} disabled={busy || changing}
-            onClick={popout}><IconExternalLink size={16} /></button>
         </>}
+        <WebEditorLink t={t} />
+        {selection && <button type="button" title={t('popout')} aria-label={t('popout')} disabled={busy || changing}
+          onClick={popout}><IconExternalLink size={16} /></button>}
         <button ref={hideButton} type="button" onClick={hide} title={t('close')} aria-label={t('close')}><IconX size={16} /></button>
       </div>
       {error && <div className="tylina-dsh-error" role="alert"><span>{error}</span>
         <button type="button" aria-label={t('dismiss')} onClick={() => setError(undefined)}><IconX size={16} /></button></div>}
-      {changing && <form className="tylina-dsh-project" onSubmit={(event) => { event.preventDefault(); void open() }}>
-        <img src="/tylina/favicon.svg" width="42" height="42" alt="" />
-        <h2>{t('choose')}</h2><p>{t('hint')}</p>
-        {sessions.ids.length ? <>
-          <label>{t('session')}<select value={selectedId} disabled={busy} onChange={(event) => setSelectedId(event.target.value as SessionId)}>
-            <option value="" disabled>{t('session')}</option>
-            {sessions.ids.map((id) => <option key={id} value={id}>{sessions.byId[id]?.displayTitle ?? id}</option>)}
-          </select></label>
-          <div className="tylina-dsh-directory">{selectedId && sessions.byId[selectedId]?.cwd}</div>
-          <label>{t('directory')}<input value={project} disabled={busy} placeholder="papers/report" spellCheck={false}
-            onChange={(event) => setProject(event.target.value)} /></label>
-          <div className="tylina-dsh-project-actions">
-            {selection && <button type="button" disabled={busy} onClick={() => setChanging(false)}>{t('cancel')}</button>}
-            <button type="submit" disabled={busy || !selectedId}>{busy ? t('loading') : t('submit')}</button>
-          </div>
-        </> : <><p>{t('noSession')}</p><button type="button" onClick={() => {
-          void ctx.sessions.create({}).then((id) => setSelectedId(id)).catch(report)
-        }}>{t('create')}</button></>}
-        <a href="/tylina/" target="_blank" rel="noopener noreferrer">{t('drafts')}</a>
-      </form>}
+      {changing && <ProjectPicker key={selection?.sessionId ?? 'initial'} t={t}
+        sessions={sessions.ids.map((id) => ({ id, title: sessions.byId[id]?.displayTitle ?? id, cwd: sessions.byId[id]?.cwd }))}
+        selectedId={selectedId} project={project} busy={busy} canCancel={Boolean(selection)}
+        onSelect={(id) => setSelectedId(id as SessionId)} onProject={setProject}
+        onOpen={() => { void open() }} onCancel={() => setChanging(false)}
+        onCreate={() => { void ctx.sessions.create({}).then((id) => { setSelectedId(id); ctx.sessions.open(id); if (sidebar.available) integration.open(id) }).catch(report) }} />}
       <div ref={container} className="tylina-dsh-editor" hidden={changing} />
-    </aside>, window.document.body)}
+    </aside>, integration.surface)}
   </>
 }
 
 export const inject = ['slots', 'locale', 'sessions', 'workspaces']
 export function apply(ctx: Context): void {
+  const integration = new BetterSidebarIntegration()
+  ctx.effect(() => () => integration.dispose())
+  registerBetterSidebar(ctx, integration)
   ctx.effect(() => ctx.locale.register('tylina', { en, zh }))
   ctx.effect(() => {
     const style = document.createElement('style'); style.textContent = css
     document.head.append(style); return () => style.remove()
   })
   ctx.slots.inject('sidebar.footer.action', () => ctx.slots.register(
-    { name: 'sidebar.footer.action', id: 'tylina', locale: 'tylina' }, (props) => <EditorAction {...props} ctx={ctx} />
+    { name: 'sidebar.footer.action', id: 'tylina', locale: 'tylina' }, (props) => <EditorAction {...props} ctx={ctx} integration={integration} />
   ))
 }

@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 
 import { verifyDock } from './dsh-dock.mjs'
+import { verifyBetterSidebar } from './dsh-better-sidebar.mjs'
 import { verifySessionFollowing } from './dsh-session-follow.mjs'
 import { verifyInstalledMcp } from './dsh-mcp-installed.mjs'
 import { verifyWindowRecovery } from './dsh-window-recovery.mjs'
@@ -19,6 +20,7 @@ const require = createRequire(join(root, 'package.json'))
 const { chromium, expect } = require('@playwright/test')
 const run = promisify(execFile)
 const version = JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).version
+const betterSidebar = process.env.TYLINA_DSH_BETTER_SIDEBAR === '1'
 const modes = process.argv.slice(2).length ? process.argv.slice(2) : ['wasm', 'native']
 const installOptions = process.env.TYLINA_DSH_OFFLINE === '1' ? ['--offline'] : []
 await mkdir(join(root, '.benchmarks'), { recursive: true })
@@ -35,6 +37,10 @@ for (const mode of modes) {
   const archive = join(root, `release/${packageName}-${version}.tgz`)
   await access(archive)
   await run('dsh', ['plugin', '--profile', 'tylina', 'add', archive, ...installOptions], { env, maxBuffer: 2 ** 20 })
+  if (betterSidebar) {
+    await writeFile(join(home, 'profiles/tylina/pnpm-workspace.yaml'), 'allowBuilds:\n  node-pty: true\n')
+    await run('dsh', ['plugin', '--profile', 'tylina', 'add', 'dsh-better-sidebar@0.18.0', ...installOptions], { env, maxBuffer: 2 ** 20 })
+  }
   const probe = join(home, 'probe')
   await mkdir(probe)
   await cp(join(root, 'tests/dsh-probe.mjs'), join(probe, 'index.mjs'))
@@ -47,7 +53,7 @@ for (const mode of modes) {
   await run('dsh', ['plugin', '--profile', 'tylina', 'add', join(home, 'tylina-acceptance-probe-1.0.0.tgz'), ...installOptions], { env, maxBuffer: 2 ** 20 })
   const profile = join(home, 'profiles/tylina/package.json')
   const manifest = JSON.parse(await readFile(profile, 'utf8'))
-  manifest.dsh.profile.bundles = ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app', packageName, 'tylina-acceptance-probe']
+  manifest.dsh.profile.bundles = ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app', packageName, 'tylina-acceptance-probe', ...(betterSidebar ? ['dsh-better-sidebar'] : [])]
   await writeFile(profile, JSON.stringify(manifest, null, 2) + '\n')
   if (mode === 'native' && process.platform !== 'win32') {
     const runtimeRequire = createRequire(join(home, 'profiles/tylina/node_modules/dsh-tylina-native/package.json'))
@@ -81,7 +87,7 @@ for (const mode of modes) {
     const errors = []
     const sockets = []
     const editorSockets = []
-    page.on('pageerror', (error) => errors.push(error.message))
+    page.on('pageerror', (error) => { errors.push(error.message); console.error('Browser error:', error.message) })
     page.on('websocket', (socket) => { if (socket.url().includes('/tylina/runtime')) sockets.push(socket) })
     page.on('websocket', (socket) => { if (new URL(socket.url()).pathname === '/tylina/editor') editorSockets.push(socket) })
     await page.goto(url)
@@ -168,7 +174,7 @@ for (const mode of modes) {
     assert.equal(sockets.length, mode === 'native' ? 1 : 0, 'hiding the editor must retain its runtime')
     await expect(frame.locator('.typst-doc')).toBeVisible()
     await page.screenshot({ path: join(root, `.benchmarks/dsh-${mode}.png`) })
-    await verifyDock({ page, frame, iframe, context, root, mode, readMain, probeRequest, expect, external, menu })
+    await (betterSidebar ? verifyBetterSidebar : verifyDock)({ page, frame, iframe, context, root, mode, readMain, probeRequest, expect, external, menu })
     await verifySessionFollowing({ page, frame, home, probeRequest, readMain, external, expect })
     await page.reload()
     const setup = page.getByRole('button', { name: /^(稍后配置|Set up later|Configure later)$/u })
@@ -184,7 +190,8 @@ for (const mode of modes) {
         }).length
       }).toBe(0)
     }
-    await page.getByRole('button', { name: /^(打开 Tylina|Open Tylina)$/u }).click()
+    // Better Sidebar restores its open tab on reload; the ordinary dock starts closed.
+    if (await launcher.getAttribute('aria-expanded') !== 'true') await launcher.click()
     await page.getByRole('button', { name: /^(打开项目|Open project)$/u }).click()
     await expect.poll(readMain).toBe(external)
     await expect(frame.locator('.typst-doc')).toBeVisible()
@@ -211,6 +218,7 @@ for (const mode of modes) {
     page = await verifyWindowRecovery({ page, context, root, mode, sessionId, readMain, expect })
     console.log(`PASS ${mode}: packed install, actual Agent loop and projects, compile/format, disk saves, external Undo, PDF export, image receipts, context replacement, host Agent navigation, hide/reopen, reload and disposal`)
   } catch (error) {
+    if (page) { const url = new URL(page.url()); console.error('Failed page:', url.origin + url.pathname); console.error((await page.locator('body').innerText().catch(() => '')).slice(0, 1800)) }
     await page?.screenshot({ path: join(root, `.benchmarks/dsh-${mode}-failure.png`) }).catch(() => undefined)
     throw error
   } finally {

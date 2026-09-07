@@ -1,21 +1,37 @@
-# Tylina for DeepSeek Harness (native)
+# Tylina for DeepSeek Harness
 
-Typst and Tinymist run on the Harness host. This universal entry selects a separate native runtime package for Linux, macOS or Windows on x64 or arm64. Keep npm optional dependencies enabled. The selected runtime is checked before launch; unavailable runtimes produce an explicit error. Use `dsh-tylina` for browser WASM compilation.
+**Beautiful documents, right beside your agent.**
 
-Requires Node.js 22.19+ and DeepSeek Harness 0.1.2-rc.1.
+[Website](https://tylina.github.io/) · [Try the Web editor](https://tylina.github.io/app/) · [简体中文](https://github.com/tylina/dsh-tylina/blob/main/README.zh-CN.md)
+
+![Tylina editing an academic presentation beside Harness](https://raw.githubusercontent.com/tylina/dsh-tylina/main/docs/media/harness-slides.png)
+
+Create résumés, posters, academic slides, charts, papers, notes, and reports. Edit the typeset page directly, or open the source beside it.
+The document and your Harness agent share the conversation's workspace, with Typst Skills, document tools, and MCP.
+
+Typst compilation runs as native processes on the Harness host.
 
 ```sh
-dsh plugin --profile web add dsh-tylina-native@0.4.0
-dsh --profile web
+dsh plugin --profile web add dsh-tylina-native
+dsh web
 ```
 
-Install one Tylina variant at a time. Open **Tylina** in the right sidebar and select a document
-in the current conversation's workspace. The editor and Agent share the same files.
-The bundle includes the complete editor, templates, fonts loaded on demand, Typst Skills,
-Agent document tools and MCP integration. No source checkout or Rust toolchain is needed to use it.
-A separate-window button is available in the editor.
+Update:
 
-The Harness host uses its normal authentication and project permissions. The host Agent owns
-model credentials and conversation settings; this package contains no API keys.
+```sh
+dsh plugin --profile web update dsh-tylina-native@latest
+```
 
-[Source and detailed instructions](https://github.com/tylina/dsh-tylina)
+Open **Tylina**, choose or create a conversation, and open its document project.
+The editor uses Better Sidebar tabs when available, or its own resizable sidebar. You can also open a separate window.
+
+Includes templates, fonts loaded on demand, Slides Mode, presenter view, and PDF export.
+Requires Node.js 22.19+ and DeepSeek Harness 0.1.2-rc.1. Install one Tylina edition per profile.
+
+Native runtimes are supplied as optional npm dependencies for macOS, Windows, and Linux on x64/arm64. Keep optional dependencies enabled; Linux requires glibc.
+
+Your Harness provider owns model credentials and conversations. No Tylina account, model proxy, source checkout, or Rust toolchain is required.
+
+[Full guide and template gallery](https://github.com/tylina/dsh-tylina) · [Development and MCP setup](https://github.com/tylina/dsh-tylina/blob/main/docs/integration.md)
+
+Tylina is proprietary software. Third-party components, fonts, and templates retain their own licenses.

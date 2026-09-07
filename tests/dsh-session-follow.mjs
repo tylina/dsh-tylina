@@ -14,7 +14,8 @@ export async function verifySessionFollowing({ page, frame, home, probeRequest, 
   // This session was created by another client (the host fixture), so refresh through the normal editor entry.
   await open.click()
   await hide.click()
-  await page.getByText(/^(未分组|Ungrouped)$/u).click()
+  const ungrouped = page.getByRole('treeitem').filter({ has: page.getByText(/^(未分组|Ungrouped)$/u) })
+  if (await ungrouped.getAttribute('aria-expanded') !== 'true') await ungrouped.click()
   await page.getByText('Conversation B', { exact: true }).click()
   await open.click()
   await expect(frame.getByTitle('Second.typ', { exact: true })).toBeVisible({ timeout: 30_000 })

@@ -29,7 +29,7 @@ export function useDocumentDock(visible: boolean) {
   useLayoutEffect(() => {
     if (!visible || viewport >= 900) return
     const siblings = [...document.body.children].filter((element): element is HTMLElement =>
-      element instanceof HTMLElement && !element.classList.contains('tylina-dsh-panel'))
+      element instanceof HTMLElement && !element.classList.contains('tylina-dsh-panel') && !element.classList.contains('tylina-dsh-surface'))
     const previous = siblings.map((element) => element.inert)
     siblings.forEach((element) => { element.inert = true })
     return () => siblings.forEach((element, index) => { element.inert = previous[index]! })

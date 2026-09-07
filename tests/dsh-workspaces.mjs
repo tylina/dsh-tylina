@@ -78,3 +78,21 @@ test('filesystem admission uses the Agent provider and rejects unmapped worlds, 
   url.searchParams.set('session', 'unknown')
   assert.equal((await fetch(url)).status, 400)
 })
+
+test('file viewer entry paths open the exact Typst main inside the admitted project', async (t) => {
+  const { directory, url } = await setup(t)
+  await mkdir(join(directory, 'paper', 'chapters'))
+  await writeFile(join(directory, 'paper', 'chapters', 'talk.typ'), '= Talk')
+  for (const entry of ['chapters/talk.typ', join(directory, 'paper', 'chapters', 'talk.typ')]) {
+    url.searchParams.set('entry', entry)
+    const response = await fetch(url)
+    assert.equal(response.status, 200)
+    const { workspace } = await response.json()
+    assert.equal(workspace.mainFile, 'chapters/talk.typ')
+    assert.equal(workspace.activeFile, 'chapters/talk.typ')
+  }
+  for (const entry of ['../outside.typ', join(directory, 'outside.typ'), 'missing.typ']) {
+    url.searchParams.set('entry', entry)
+    assert.equal((await fetch(url)).status, 400)
+  }
+})

@@ -4,6 +4,7 @@ import { IconLayoutSidebarRight, IconMessageCircle, IconRefresh, IconX } from '@
 import { openHarnessDocument, prepareHarnessProject, type HarnessDocument } from './document'
 import { en, zh } from './locale'
 import { css } from './styles'
+import { TylinaBrand, WebEditorLink } from './brand'
 import { McpConnectionButton } from './mcp-connection'
 import { createProjectContact } from './window-contact'
 import { useToolReconnect } from './use-tool-reconnect'
@@ -60,7 +61,7 @@ function ProjectWindow() {
     } finally { setBusy(false) }
   }
   return <main className="tylina-dsh-panel" style={{ width: '100%', border: 0 }}>
-    <header className="tylina-dsh-bar"><strong>Tylina</strong><span className="tylina-dsh-session">{params.get('project')}</span>
+    <header className="tylina-dsh-bar"><TylinaBrand t={t} /><span className="tylina-dsh-session">{params.get('project')}</span><WebEditorLink t={t} />
       <McpConnectionButton getDocument={() => current.current} t={t} disabled={busy || toolConnection.busy} />
       <button type="button" title={t(toolConnection.busy ? 'reconnecting' : 'retry')}
         aria-label={t(toolConnection.busy ? 'reconnecting' : 'retry')} aria-busy={toolConnection.busy}

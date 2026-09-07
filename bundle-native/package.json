@@ -1,6 +1,6 @@
 {
   "name": "dsh-tylina-native",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "type": "module",
   "license": "UNLICENSED",
   "description": "Tylina native runtime bundle for DeepSeek Harness",
@@ -32,7 +32,7 @@
     "@deepseek-ai/dsh-llm": "0.1.2-rc.1",
     "@deepseek-ai/dsh-skill-filesystem": "0.1.2-rc.1",
     "ws": "^8.18.3",
-    "tylina-web-assets": "0.4.0"
+    "tylina-web-assets": "0.4.1"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -44,7 +44,8 @@
     "typescript": "^6.0.3"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "^4.0.2"
+    "@deepseek-ai/cordis": "^4.0.2",
+    "dsh-better-sidebar": "^0.18.0"
   },
   "publishConfig": {
     "access": "public"
@@ -62,11 +63,16 @@
   },
   "homepage": "https://github.com/tylina/dsh-tylina#readme",
   "optionalDependencies": {
-    "tylina-native-darwin-arm64": "0.4.0",
-    "tylina-native-darwin-x64": "0.4.0",
-    "tylina-native-linux-x64": "0.4.0",
-    "tylina-native-linux-arm64": "0.4.0",
-    "tylina-native-win32-x64": "0.4.0",
-    "tylina-native-win32-arm64": "0.4.0"
+    "tylina-native-darwin-arm64": "0.4.1",
+    "tylina-native-darwin-x64": "0.4.1",
+    "tylina-native-linux-x64": "0.4.1",
+    "tylina-native-linux-arm64": "0.4.1",
+    "tylina-native-win32-x64": "0.4.1",
+    "tylina-native-win32-arm64": "0.4.1"
+  },
+  "peerDependenciesMeta": {
+    "dsh-better-sidebar": {
+      "optional": true
+    }
   }
 }

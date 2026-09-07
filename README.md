@@ -14,8 +14,6 @@ Edit typeset Typst documents inside DeepSeek Harness. Share a workspace with you
 
 ## Install & update
 
-> Version 0.4.1 is being prepared for npm. The installation commands below become available after publication.
-
 Already using DeepSeek Harness? Install the browser WASM edition:
 
 ```sh
@@ -35,6 +33,8 @@ With Better Sidebar installed, Tylina joins its tabs; otherwise it provides its 
 
 <details>
 <summary><strong>Native edition, requirements, and switching</strong></summary>
+
+The native edition is finishing its platform builds and is not yet published. The WASM edition above is available now.
 
 | Package | Compilation runs in | Choose it for |
 | --- | --- | --- |

@@ -16,8 +16,6 @@
 
 已有 DeepSeek Harness？安装浏览器 WASM 版：
 
-> 0.4.1 正在准备发布到 npm；发布完成后即可使用下面的安装命令。
-
 ```sh
 dsh plugin --profile web add dsh-tylina
 dsh web
@@ -36,6 +34,8 @@ dsh plugin --profile web update dsh-tylina@latest
 
 <details>
 <summary><strong>原生版、环境要求与切换方式</strong></summary>
+
+原生版正在完成各平台构建，暂未发布；上面的 WASM 版现在即可安装。
 
 | 包 | 编译在哪里运行 | 适合 |
 | --- | --- | --- |

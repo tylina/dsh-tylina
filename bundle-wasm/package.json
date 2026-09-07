@@ -1,6 +1,6 @@
 {
   "name": "dsh-tylina",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "type": "module",
   "license": "UNLICENSED",
   "description": "Tylina wasm runtime bundle for DeepSeek Harness",
@@ -32,10 +32,11 @@
     "@deepseek-ai/dsh-llm": "0.1.2-rc.1",
     "@deepseek-ai/dsh-skill-filesystem": "0.1.2-rc.1",
     "ws": "^8.18.3",
-    "tylina-web-assets": "0.4.0"
+    "tylina-web-assets": "0.4.1"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "^4.0.2"
+    "@deepseek-ai/cordis": "^4.0.2",
+    "dsh-better-sidebar": "^0.18.0"
   },
   "devDependencies": {
     "@tylina/dsh-plugin": "workspace:*",
@@ -58,5 +59,10 @@
   "homepage": "https://github.com/tylina/dsh-tylina#readme",
   "publishConfig": {
     "access": "public"
+  },
+  "peerDependenciesMeta": {
+    "dsh-better-sidebar": {
+      "optional": true
+    }
   }
 }

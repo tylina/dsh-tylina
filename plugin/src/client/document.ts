@@ -25,7 +25,7 @@ async function projectRequest(url: URL, init: RequestInit): Promise<Response> {
   return response
 }
 
-export async function prepareHarnessProject(options: { sessionId: string; project: string }): Promise<PreparedProject> {
+export async function prepareHarnessProject(options: { sessionId: string; project: string; entry?: string }): Promise<PreparedProject> {
   const url = new URL('/tylina/project', location.href)
   url.searchParams.set('session', options.sessionId)
   if (options.project) url.searchParams.set('project', options.project)
@@ -35,7 +35,11 @@ export async function prepareHarnessProject(options: { sessionId: string; projec
     if (typeof preference?.mainFile === 'string') url.searchParams.set('main', preference.mainFile)
     if (typeof preference?.activeFile === 'string') url.searchParams.set('file', preference.activeFile)
   } catch { /* Navigation preferences are optional, not document storage. */ }
+  if (options.entry) url.searchParams.set('entry', options.entry)
   const initial = await (await projectRequest(url, {})).json() as ProjectSnapshot
+  url.searchParams.delete('entry')
+  if (initial.workspace.mainFile) url.searchParams.set('main', initial.workspace.mainFile)
+  if (initial.workspace.activeFile) url.searchParams.set('file', initial.workspace.activeFile)
   return { url, initial, preferenceKey }
 }
 

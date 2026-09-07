@@ -9,7 +9,7 @@ if (!existsSync(join(sourceRoot, '.git'))) {
   git(['init'])
   git(['remote', 'add', 'origin', pin.repository])
 }
-if (git(['remote', 'get-url', 'origin']) !== pin.repository) throw new Error('Unexpected Tylina source remote')
+if (git(['config', '--get', 'remote.origin.url']) !== pin.repository) throw new Error('Unexpected Tylina source remote')
 if (git(['status', '--porcelain', '--untracked-files=no'])) throw new Error('Tylina source has local edits; commit or stash before changing its pin')
 try { git(['cat-file', '-e', `${pin.revision}^{commit}`]) }
 catch { git(['fetch', '--depth=1', 'origin', pin.revision]) }

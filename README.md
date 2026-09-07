@@ -33,6 +33,11 @@ The separate “Browser drafts” entry opens the standalone editor with browser
 This repository builds independently of a parent Tylina checkout. Prerequisites are Node.js 22.19+
 (or Node.js 24), pnpm 11.9, Git, Rust with `wasm32-unknown-unknown`, and `wasm-pack`.
 Native builds additionally need the platform's Rust/C++ toolchain.
+The pinned Tylina core repository is currently private: building from source requires a GitHub
+account with read access and authenticated Git. Installing a prebuilt bundle requires neither.
+CI requires `TYLINA_SOURCE_SSH_KEY`, a dedicated read-only deploy key for that core repository.
+The key is used only during source preparation and is removed before dependency scripts run.
+Fork pull requests cannot access this secret; maintainers must run checks from a trusted branch.
 
 ```sh
 git clone https://github.com/tylina/dsh-tylina.git
@@ -179,4 +184,4 @@ under the same npm name/version: npm versions are immutable. Before a multi-plat
 split native binaries into platform-specific packages selected through optional dependencies.
 The current platform-tagged tarballs remain suitable for local Harness installation.
 Licensing is inherited from Tylina (`UNLICENSED`); third-party notices are included separately.
-Confirm the project's intended distribution license before an npm release.
+Publishing preserves that existing license; it does not change the core source visibility.

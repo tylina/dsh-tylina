@@ -13,6 +13,7 @@ const require = createRequire(join(root, 'plugin/package.json'))
 const load = (name) => import(pathToFileURL(require.resolve(name)).href)
 const { Context } = await load('@deepseek-ai/cordis')
 const { LocalFileSystem } = await load('@deepseek-ai/dsh-fs-local')
+await mkdir(join(root, '.benchmarks'), { recursive: true })
 const temporary = await mkdtemp(join(root, '.benchmarks/dsh-workspaces-'))
 after(() => rm(temporary, { recursive: true, force: true }))
 await require('esbuild').build({ entryPoints: [join(root, 'plugin/src/workspaces.ts')],

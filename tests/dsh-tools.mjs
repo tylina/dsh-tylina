@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -14,6 +14,7 @@ const { SystemPrompt } = await load('@deepseek-ai/dsh-system-prompt')
 const { ToolRuntime } = await load('@deepseek-ai/dsh-tools')
 const { createScope } = await load('@deepseek-ai/dsh-scope')
 const { ToolCallId } = await load('@deepseek-ai/dsh-llm')
+await mkdir(join(root, '.benchmarks'), { recursive: true })
 const temporary = await mkdtemp(join(root, '.benchmarks/dsh-tools-'))
 after(() => rm(temporary, { recursive: true, force: true }))
 await require('esbuild').build({ entryPoints: [join(root, 'plugin/src/tools.ts')],

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { once } from 'node:events'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
@@ -10,6 +10,7 @@ import { after, test } from 'node:test'
 const root = fileURLToPath(new URL('../', import.meta.url))
 const require = createRequire(join(root, 'plugin/package.json'))
 const { WebSocket } = require('ws')
+await mkdir(join(root, '.benchmarks'), { recursive: true })
 const temporary = await mkdtemp(join(root, '.benchmarks/dsh-editor-connection-'))
 after(() => rm(temporary, { recursive: true, force: true }))
 await require('esbuild').build({ entryPoints: {

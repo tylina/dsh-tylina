@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { once } from 'node:events'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm } from 'node:fs/promises'
 import { createServer, request as httpRequest } from 'node:http'
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
@@ -11,6 +11,7 @@ const root = fileURLToPath(new URL('../', import.meta.url))
 const require = createRequire(join(root, 'plugin/package.json'))
 const desktop = createRequire(join(root, 'package.json'))
 const { Client, StreamableHTTPClientTransport } = desktop('@modelcontextprotocol/client')
+await mkdir(join(root, '.benchmarks'), { recursive: true })
 const temporary = await mkdtemp(join(root, '.benchmarks/dsh-mcp-'))
 after(() => rm(temporary, { recursive: true, force: true }))
 await require('esbuild').build({ entryPoints: [join(root, 'plugin/src/mcp.ts')],

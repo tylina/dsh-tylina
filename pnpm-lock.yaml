@@ -62,6 +62,9 @@ importers:
       tylina-native-darwin-arm64:
         specifier: 0.4.1
         version: 0.4.1
+      tylina-native-darwin-x64:
+        specifier: 0.4.1
+        version: 0.4.1
       tylina-native-linux-arm64:
         specifier: 0.4.1
         version: 0.4.1
@@ -71,6 +74,9 @@ importers:
       tylina-native-win32-arm64:
         specifier: 0.4.1
         version: 0.4.1
+      tylina-native-win32-x64:
+        specifier: https://github.com/tylina/tylina-issues/releases/download/native-v0.4.1/tylina-native-win32-x64-0.4.1.tgz
+        version: https://github.com/tylina/tylina-issues/releases/download/native-v0.4.1/tylina-native-win32-x64-0.4.1.tgz
 
   bundle-wasm:
     dependencies:
@@ -2120,6 +2126,11 @@ packages:
     cpu: [arm64]
     os: [darwin]
 
+  tylina-native-darwin-x64@0.4.1:
+    resolution: {integrity: sha512-TxuYglmMdjmzZ7KHYs90M8CDBwtK9YM/TitUdytj2ctHUHEemt8PYOyPpP0QJDkIl8T88qZiHibi2y2Ba23nhQ==}
+    cpu: [x64]
+    os: [darwin]
+
   tylina-native-linux-arm64@0.4.1:
     resolution: {integrity: sha512-dIHrVO+ipXsxckiEv929R1RN6DKCjzscYzXf/tx0XTP+Bqp6weexWQ6+NZN4+DHdAzrGNblOXECDeMZEIhOTpQ==}
     cpu: [arm64]
@@ -2135,6 +2146,12 @@ packages:
   tylina-native-win32-arm64@0.4.1:
     resolution: {integrity: sha512-VQa0/kVCvmrvchHDQAT5FgEhMAH57CEryFpX6KTaATNaJMTp1JaRj2rbf78ASqrhN3nYdYtN0NT5RlcZ0ya+rQ==}
     cpu: [arm64]
+    os: [win32]
+
+  tylina-native-win32-x64@https://github.com/tylina/tylina-issues/releases/download/native-v0.4.1/tylina-native-win32-x64-0.4.1.tgz:
+    resolution: {integrity: sha512-w4I63LCGemAO1Gl1NaFUY8ZldqJClpfZgxWpbdkZKJiLJoPeuv/ISyGSbHqZe0pY7sjuf30KGUwt9YGoDPfY6w==, tarball: https://github.com/tylina/tylina-issues/releases/download/native-v0.4.1/tylina-native-win32-x64-0.4.1.tgz}
+    version: 0.4.1
+    cpu: [x64]
     os: [win32]
 
   tylina-sdk@0.4.0:
@@ -4481,6 +4498,9 @@ snapshots:
   tylina-native-darwin-arm64@0.4.1:
     optional: true
 
+  tylina-native-darwin-x64@0.4.1:
+    optional: true
+
   tylina-native-linux-arm64@0.4.1:
     optional: true
 
@@ -4488,6 +4508,9 @@ snapshots:
     optional: true
 
   tylina-native-win32-arm64@0.4.1:
+    optional: true
+
+  tylina-native-win32-x64@https://github.com/tylina/tylina-issues/releases/download/native-v0.4.1/tylina-native-win32-x64-0.4.1.tgz:
     optional: true
 
   tylina-sdk@0.4.0:

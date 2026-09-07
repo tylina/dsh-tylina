@@ -180,3 +180,7 @@ from a mutable URL. Windows runtime packages use `.exe` names; POSIX executables
 
 Licensing is inherited from Tylina (`UNLICENSED`); third-party notices are included separately.
 Publishing preserves that existing license; it does not change the core source visibility.
+
+## Native runtime distribution
+
+The native bundle installs the matching runtime as an optional dependency. macOS, Linux, and Windows ARM64 use versioned npm packages. Windows x64 uses the compiled archive from the fixed `native-v0.4.1` GitHub Release, with its integrity recorded in the lockfile and SHA-256 published alongside the archive. This distribution avoids requiring a source checkout or a Rust toolchain; optional dependencies must remain enabled.

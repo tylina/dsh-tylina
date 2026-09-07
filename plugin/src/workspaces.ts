@@ -9,6 +9,8 @@ import { checkWorkspacePath, createNodeWorkspacePool, nativeWorkspacePath, requi
 import { decodeWorkspace, encodeWorkspace, type WorkspaceWire } from './workspace-wire'
 import { withAgentServices } from './agent-services'
 import { createHarnessFileSystem } from './file-system'
+import { createWorkspaceViews } from './workspace-views'
+import type { EmbeddedWorkspaceRemovals } from 'tylina-sdk/client'
 
 /** A provider-owned process path is usable by Node only with an explicit identity host mapping. */
 export async function resolveHarnessProject(fs: FileSystem, cwd: string, project: string, signal?: AbortSignal): Promise<string> {
@@ -30,14 +32,15 @@ export async function resolveHarnessProject(fs: FileSystem, cwd: string, project
 }
 
 export function createHarnessWorkspaces(ctx: Context, mode: 'wasm' | 'native') {
-  const pool = createNodeWorkspacePool({ lazy: mode === 'wasm' })
+  const pool = createNodeWorkspacePool({ lazy: true })
+  const views = createWorkspaceViews(pool)
   const identify = (sessionId: string, project: string) => {
     if (!sessionId || sessionId.length > 256 || project.length > 2048) throw new Error('Invalid Harness project identity')
   }
   const projectFor = async (fs: FileSystem, cwd: string, project: string, signal?: AbortSignal) => {
     const path = await resolveHarnessProject(fs, cwd, project, signal)
     const target = await fs.resolve(path, { signal })
-    return { store: await pool.get(path, createHarnessFileSystem(fs, target)), path }
+    return { fileSystem: createHarnessFileSystem(fs, target), path }
   }
   const resolve = async (sessionId: string, project: string, signal?: AbortSignal) => {
     identify(sessionId, project)
@@ -65,7 +68,7 @@ export function createHarnessWorkspaces(ctx: Context, mode: 'wasm' | 'native') {
   }
   return {
     resolve,
-    dispose: pool.dispose,
+    async dispose() { await views.dispose(); await pool.dispose() },
     async handle(request: IncomingMessage, response: ServerResponse) {
       const abort = new AbortController()
       const disconnect = () => { if (!response.writableFinished) abort.abort(new Error('The project request disconnected')) }
@@ -73,49 +76,64 @@ export function createHarnessWorkspaces(ctx: Context, mode: 'wasm' | 'native') {
       response.setHeader('Cache-Control', 'no-store')
       response.setHeader('X-Content-Type-Options', 'nosniff')
       try {
-        if (request.method !== 'GET' && request.method !== 'POST') { response.writeHead(405, { Allow: 'GET, POST' }); response.end(); return }
+        if (!['GET', 'POST', 'DELETE'].includes(request.method ?? '')) { response.writeHead(405, { Allow: 'GET, POST, DELETE' }); response.end(); return }
+        if (request.method === 'DELETE' && !request.headers.origin) { response.writeHead(403); response.end(); return }
         if (request.method === 'POST' && (!request.headers.origin || request.headers['content-type'] !== 'application/json')) {
           response.writeHead(403); response.end(); return
         }
         const url = new URL(request.url ?? '/', 'http://localhost')
-        const { store, path } = await open(url.searchParams.get('session') ?? '', url.searchParams.get('project') ?? '', abort.signal)
-        let result: unknown
-        if (request.method === 'GET') {
-          const read = url.searchParams.get('read')
-          if (read !== null) {
-            if (!store.readFile) throw new Error('On-demand files are unavailable for this runtime')
-            const file = await store.readFile(requireWorkspaceRelativePath(read), abort.signal)
-            response.writeHead(file ? 200 : 404, { 'Content-Type': 'application/octet-stream', ...(file && { 'X-Tylina-File-Version': file.version }) })
-            response.end(file ? Buffer.from(file.bytes) : undefined); return
+        const session = url.searchParams.get('session') ?? '', project = url.searchParams.get('project') ?? ''
+        identify(session, project)
+        const view = url.searchParams.get('view') ?? ''
+        if (view.length < 16 || view.length > 128) throw new Error('The document workspace requires a view identity')
+        const key = JSON.stringify([session, project, view])
+        if (request.method === 'DELETE') { await views.release(key); response.writeHead(204); response.end(); return }
+        const { fileSystem, path } = await open(session, project, abort.signal)
+        abort.signal.throwIfAborted()
+        await views.use(key, path, fileSystem, async (store) => {
+          let result: unknown
+          if (request.method === 'GET') {
+            const directory = url.searchParams.get('directory')
+            if (directory !== null) {
+              const entries = await store.readDirectory!(directory === '' ? '' : requireWorkspaceRelativePath(directory), abort.signal)
+              response.writeHead(200, { 'Content-Type': 'application/json' }); response.end(JSON.stringify(entries)); return
+            }
+            const read = url.searchParams.get('read')
+            if (read !== null) {
+              if (!store.readFile) throw new Error('On-demand files are unavailable for this runtime')
+              const file = await store.readFile(requireWorkspaceRelativePath(read), abort.signal)
+              response.writeHead(file ? 200 : 404, { 'Content-Type': 'application/octet-stream', ...(file && { 'X-Tylina-File-Version': file.version }) })
+              response.end(file ? Buffer.from(file.bytes) : undefined); return
+            }
+            const entry = url.searchParams.get('entry')
+            let mainFile = url.searchParams.get('main'), activeFile = url.searchParams.get('file')
+            if (entry !== null) {
+              if (!entry || entry.length > 4096) throw new Error('Invalid document path')
+              const portable = isAbsolute(entry) ? relative(path, entry).split(sep).join('/') : entry
+              const file = requireWorkspaceRelativePath(portable)
+              if (extname(file).toLowerCase() !== '.typ') throw new Error('Choose a Typst document')
+              await checkWorkspacePath(path, file)
+              mainFile = activeFile = file
+            }
+            const snapshot = await store.readIfChanged(request.headers['if-none-match'], { mainFile, activeFile }, abort.signal)
+            if (entry !== null && snapshot && !(mainFile! in snapshot.workspace.files)) throw new Error('Document does not exist in this workspace')
+            if (!snapshot) { response.writeHead(304); response.end(); return }
+            response.setHeader('ETag', `"${snapshot.revision}"`)
+            result = { ...snapshot, mode, workspace: encodeWorkspace(snapshot.workspace) }
+          } else {
+            const chunks: Buffer[] = []
+            let bytes = 0
+            for await (const chunk of request) {
+              bytes += chunk.length
+              if (bytes > 192 * 1024 * 1024) throw new Error('Project request exceeds its byte limit')
+              chunks.push(Buffer.from(chunk))
+            }
+            const body = JSON.parse(Buffer.concat(chunks).toString('utf8')) as { workspace: WorkspaceWire; revision: string; removals?: EmbeddedWorkspaceRemovals }
+            if (typeof body.revision !== 'string' || body.revision.length > 256) throw new Error('Invalid project revision')
+            result = await store.save(decodeWorkspace(body.workspace), body.revision, abort.signal, body.removals)
           }
-          const entry = url.searchParams.get('entry')
-          let mainFile = url.searchParams.get('main'), activeFile = url.searchParams.get('file')
-          if (entry !== null) {
-            if (!entry || entry.length > 4096) throw new Error('Invalid document path')
-            const portable = isAbsolute(entry) ? relative(path, entry).split(sep).join('/') : entry
-            const file = requireWorkspaceRelativePath(portable)
-            if (extname(file).toLowerCase() !== '.typ') throw new Error('Choose a Typst document')
-            await checkWorkspacePath(path, file)
-            mainFile = activeFile = file
-          }
-          const snapshot = await store.readIfChanged(request.headers['if-none-match'], { mainFile, activeFile }, abort.signal)
-          if (entry !== null && snapshot && !(mainFile! in snapshot.workspace.files)) throw new Error('Document does not exist in this workspace')
-          if (!snapshot) { response.writeHead(304); response.end(); return }
-          response.setHeader('ETag', `"${snapshot.revision}"`)
-          result = { ...snapshot, mode, workspace: encodeWorkspace(snapshot.workspace) }
-        } else {
-          const chunks: Buffer[] = []
-          let bytes = 0
-          for await (const chunk of request) {
-            bytes += chunk.length
-            if (bytes > 192 * 1024 * 1024) throw new Error('Project request exceeds its byte limit')
-            chunks.push(Buffer.from(chunk))
-          }
-          const body = JSON.parse(Buffer.concat(chunks).toString('utf8')) as { workspace: WorkspaceWire; revision: string }
-          if (typeof body.revision !== 'string' || body.revision.length > 256) throw new Error('Invalid project revision')
-          result = await store.save(decodeWorkspace(body.workspace), body.revision, abort.signal)
-        }
-        response.writeHead(200, { 'Content-Type': 'application/json' }); response.end(JSON.stringify(result))
+          response.writeHead(200, { 'Content-Type': 'application/json' }); response.end(JSON.stringify(result))
+        })
       } catch (error) {
         if (!response.headersSent) response.writeHead(error instanceof Error && error.name === 'WorkspaceVersionConflict' ? 409 : 400, { 'Content-Type': 'application/json' })
         response.end(JSON.stringify({ error: error instanceof Error ? error.message : 'Could not access the Harness project' }))

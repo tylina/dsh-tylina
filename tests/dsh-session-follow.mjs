@@ -30,6 +30,8 @@ export async function verifySessionFollowing({ page, frame, home, probeRequest, 
     .filter((tool) => tool.name.startsWith('tylina_')).length
   await expect.poll(() => count(second.sessionId)).toBe(18)
   await expect.poll(() => count()).toBe(0)
+  await expect(page.locator('.tylina-dsh-error')).toHaveCount(0)
+  await expect(page.locator('.tylina-dsh-bar .tylina-dsh-brand img')).toHaveCount(0)
   const info = (await probeRequest({ sessionId: second.sessionId, name: 'tylina_workspace_info' })).value.structuredContent
   assert.equal(info.root, cwd)
   await expect.poll(readMain).toBe(external)
@@ -40,6 +42,7 @@ export async function verifySessionFollowing({ page, frame, home, probeRequest, 
   await expect(frame.locator('.typst-doc')).toBeVisible()
   await expect.poll(() => count()).toBe(18)
   await expect.poll(() => count(second.sessionId)).toBe(0)
+  await expect(page.locator('.tylina-dsh-error')).toHaveCount(0)
   await expect.poll(readMain).toBe(external)
   assert.equal(await readFile(join(cwd, 'Second.typ'), 'utf8'), source)
 }

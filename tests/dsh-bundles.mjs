@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict'
+import { createHash } from 'node:crypto'
 import { spawn, execFile } from 'node:child_process'
 import { once } from 'node:events'
 import { access, cp, mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises'
-import { constants } from 'node:fs'
+import { constants, createReadStream } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -22,6 +23,11 @@ const run = promisify(execFile)
 const betterSidebar = process.env.TYLINA_DSH_BETTER_SIDEBAR === '1'
 const modes = process.argv.slice(2).length ? process.argv.slice(2) : ['wasm', 'native']
 const installOptions = process.env.TYLINA_DSH_OFFLINE === '1' ? ['--offline'] : []
+const digest = async (path) => {
+  const hash = createHash('sha256')
+  for await (const bytes of createReadStream(path)) hash.update(bytes)
+  return hash.digest('hex')
+}
 await mkdir(join(root, '.benchmarks'), { recursive: true })
 
 for (const mode of modes) {
@@ -56,19 +62,30 @@ for (const mode of modes) {
   const manifest = JSON.parse(await readFile(profile, 'utf8'))
   manifest.dsh.profile.bundles = ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app', packageName, 'tylina-acceptance-probe', ...(betterSidebar ? ['dsh-better-sidebar'] : [])]
   await writeFile(profile, JSON.stringify(manifest, null, 2) + '\n')
-  if (process.env.TYLINA_DSH_WEB_ASSETS) {
+  const candidates = {
+    ...(process.env.TYLINA_DSH_WEB_ASSETS && { 'tylina-web-assets': process.env.TYLINA_DSH_WEB_ASSETS }),
+    ...(mode === 'native' && process.env.TYLINA_DSH_NATIVE_RUNTIME && {
+      [`tylina-native-${process.platform}-${process.arch}`]: process.env.TYLINA_DSH_NATIVE_RUNTIME
+    })
+  }
+  if (Object.keys(candidates).length) {
     const configuration = join(home, 'profiles/tylina/pnpm-workspace.yaml')
     await writeFile(configuration, await readFile(configuration, 'utf8') +
-      `\noverrides:\n  tylina-web-assets: ${JSON.stringify(`file:${process.env.TYLINA_DSH_WEB_ASSETS}`)}\n`)
+      '\noverrides:\n' + Object.entries(candidates).map(([name, path]) => `  ${name}: ${JSON.stringify(`file:${path}`)}\n`).join(''))
     await run('pnpm', ['install', '--no-frozen-lockfile'], { cwd: join(home, 'profiles/tylina'), env, maxBuffer: 2 ** 20 })
+  }
+  if (process.env.TYLINA_DSH_WEB_ASSETS) {
     assert.equal(await readFile(join(home, 'profiles/tylina/node_modules/tylina-web-assets/web/embed.html'), 'utf8'),
       await readFile(join(process.env.TYLINA_DSH_WEB_ASSETS, 'web/embed.html'), 'utf8'), 'the test must install the candidate Web assets')
   }
-  if (mode === 'native' && process.platform !== 'win32') {
+  if (mode === 'native') {
     const runtimeRequire = createRequire(join(home, 'profiles/tylina/node_modules/dsh-tylina-native/package.json'))
     const runtimeRoot = dirname(runtimeRequire.resolve(`tylina-native-${process.platform}-${process.arch}/package.json`))
-    for (const name of ['tinymist', 'tylina-tinymist']) {
-      await access(join(runtimeRoot, 'runtime', name), constants.X_OK)
+    for (const binary of ['tinymist', 'tylina-tinymist']) {
+      const name = binary + (process.platform === 'win32' ? '.exe' : '')
+      await access(join(runtimeRoot, 'runtime', name), process.platform === 'win32' ? constants.F_OK : constants.X_OK)
+      if (process.env.TYLINA_DSH_NATIVE_RUNTIME) assert.equal(await digest(join(runtimeRoot, 'runtime', name)),
+        await digest(join(process.env.TYLINA_DSH_NATIVE_RUNTIME, 'runtime', name)), 'the test must install the candidate Native engine')
     }
   }
   const server = spawn('dsh', ['--profile', 'tylina', '--host', '127.0.0.1', '--port', '0', '--no-open'], { env, cwd: project, stdio: ['ignore', 'pipe', 'pipe'] })
@@ -85,18 +102,34 @@ for (const mode of modes) {
   server.on('exit', () => { clearTimeout(timer); rejectUrl(new Error('dsh exited before startup')) })
   let browser
   let page
+  const errors = [], diagnostics = []
   try {
     const url = await urlReady
     const origin = new URL(url).origin
     assert.equal((await fetch(`${origin}/tylina/`)).status, 401, 'the app must require the Harness session')
     browser = await chromium.launch({ headless: Boolean(process.env.CI) })
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, permissions: ['clipboard-read', 'clipboard-write'] })
-    await context.addInitScript(() => localStorage.setItem('tylina.locale', 'en'))
+    context.on('page', (owner) => {
+      owner.on('pageerror', (error) => { errors.push(error.message) })
+      owner.on('console', (message) => {
+        if (message.type() === 'error' && diagnostics.length < 256) diagnostics.push({ kind: 'console', text: message.text() })
+      })
+      owner.on('requestfailed', (request) => {
+        const url = new URL(request.url())
+        if (diagnostics.length < 256) diagnostics.push({ kind: 'request', path: url.pathname, error: request.failure()?.errorText })
+      })
+      owner.on('response', (response) => {
+        if (response.status() < 400 || diagnostics.length >= 256) return
+        const url = new URL(response.url())
+        diagnostics.push({ kind: 'http', path: url.pathname, status: response.status(), read: url.searchParams.get('read') })
+      })
+    })
+    await context.addInitScript(() => {
+      if (location.protocol === 'http:' || location.protocol === 'https:') localStorage.setItem('tylina.locale', 'en')
+    })
     page = await context.newPage()
-    const errors = []
     const sockets = []
     const editorSockets = []
-    page.on('pageerror', (error) => { errors.push(error.message); console.error('Browser error:', error.message) })
     page.on('websocket', (socket) => { if (socket.url().includes('/tylina/runtime')) sockets.push(socket) })
     page.on('websocket', (socket) => { if (new URL(socket.url()).pathname === '/tylina/editor') editorSockets.push(socket) })
     let openedSession
@@ -114,11 +147,16 @@ for (const mode of modes) {
       if (!response.ok) throw new Error(await response.text())
     })
     await page.reload()
-    await page.getByRole('button', { name: /^(稍后配置|Set up later|Configure later)$/u }).click()
+    const configure = page.getByRole('button', { name: /^(稍后配置|Set up later|Configure later)$/u })
+    await expect.poll(async () => await configure.isVisible() || await page.getByRole('button', { name: /^(打开 Tylina|Open Tylina)$/u }).isVisible()).toBe(true)
+    if (await configure.isVisible()) await configure.click()
     const revealConversations = page.getByRole('button', { name: /^(打开侧边栏|Open sidebar)$/u })
     if (await revealConversations.isVisible()) await revealConversations.click()
     const projectGroup = page.getByRole('treeitem').filter({ has: page.getByText('project', { exact: true }) }).first()
-    if (await projectGroup.getAttribute('aria-expanded') !== 'true') await projectGroup.click()
+    await expect.poll(async () => {
+      if (await projectGroup.getAttribute('aria-expanded') !== 'true') await projectGroup.click()
+      return page.getByText('Conversation A', { exact: true }).isVisible()
+    }).toBe(true)
     await page.getByText('Conversation A', { exact: true }).click()
     const firstProject = page.waitForResponse((response) => new URL(response.url()).pathname === '/tylina/project')
     void firstProject.catch(() => undefined)
@@ -244,6 +282,15 @@ for (const mode of modes) {
       assert.equal(pdf.subarray(0, 5).toString(), '%PDF-')
     }
     page = await verifyWindowRecovery({ page, context, root, mode, sessionId, readMain, expect })
+    await expect(page.locator('.tylina-dsh-error')).toHaveCount(0)
+    assert.deepEqual(errors, [], 'all editor and detached windows must finish without uncaught browser errors')
+    assert.deepEqual(diagnostics.filter((entry) => entry.kind === 'http' && !(
+      entry.path === '/tylina/project' && (entry.status === 503 || entry.status === 404 && entry.read === 'output/Agent.pdf')
+    )), [], 'only the injected save failure and the absent export destination may return HTTP errors')
+    assert.deepEqual(diagnostics.filter((entry) => entry.kind === 'console' && !entry.text.startsWith('Failed to load resource:')),
+      [], 'the host console must not contain application errors')
+    assert.deepEqual(diagnostics.filter((entry) => entry.kind === 'request' && entry.error !== 'net::ERR_ABORTED'),
+      [], 'retired request cancellation is expected; other network failures are not')
     console.log(`PASS ${mode}: packed install, actual Agent loop and projects, compile/format, disk saves, external Undo, PDF export, image receipts, context replacement, host Agent navigation, hide/reopen, reload and disposal`)
   } catch (error) {
     if (page) { const url = new URL(page.url()); console.error('Failed page:', url.origin + url.pathname); console.error((await page.locator('body').innerText().catch(() => '')).slice(0, 1800)) }
@@ -257,5 +304,6 @@ for (const mode of modes) {
     if (server.exitCode === null) await once(server, 'exit')
     clearTimeout(killed)
     await writeFile(join(home, 'server.log'), output.replace(/\?token=\S+/gu, '?token=[redacted]'))
+    await writeFile(join(home, 'browser-diagnostics.json'), JSON.stringify({ errors, diagnostics }, null, 2) + '\n')
   }
 }

@@ -15,14 +15,14 @@ export function createSessionBinder(workspaces: ReturnType<typeof createHarnessW
   runtime: TylinaToolRuntime, mcp: ReturnType<typeof createHarnessMcpEndpoints>) {
   let core: Promise<string> | undefined
   return async (sessionId: string, call: EditorToolCaller, signal: AbortSignal, project = '') => {
-    const { agent, store } = await workspaces.resolve(sessionId, project, signal)
+    const { agent, path } = await workspaces.resolve(sessionId, project, signal)
     const instructions = await (core ??= loadTylinaMcpCoreSkillInstructions({ skillsRootPath }))
     const coreMessage = () => createUserMessage({ source: { kind: 'plugin', plugin: 'tylina', form: 'instructions' },
       content: [{ type: 'text', text: createTylinaMcpSessionInstructions(instructions, 'memory') }] })
     // Compaction retains the original log while replacing its model-visible surface.
     const retainedCore = () => agent.session.deriveMessages().some(isCore)
     signal.throwIfAborted()
-    const execute = withHarnessToolRuntime(call, runtime, store.rootPath, skillsRootPath)
+    const execute = withHarnessToolRuntime(call, runtime, path, skillsRootPath)
     const pending = new Set<ReturnType<EditorToolCaller>>()
     const invoke: EditorToolCaller = (name, input, callerSignal) => {
       const task = Promise.resolve().then(() => execute(name, input, AbortSignal.any([signal, callerSignal])))
@@ -55,7 +55,7 @@ export function createSessionBinder(workspaces: ReturnType<typeof createHarnessW
       if (!retainedCore() && !agent.inbox.nextStep.some(isCore)) agent.inject(coreMessage())
       agent.inject(createUserMessage({ source: { kind: 'plugin', plugin: 'tylina', form: 'notice',
         summary: 'Tylina document tools connected' }, content: [{ type: 'text', text:
-        `Tylina is connected to this session's document project at ${store.rootPath}. Its file tools use paths relative to that project. ` +
+        `Tylina is connected to this session's document project at ${path}. Its file tools use paths relative to that project. ` +
         'Read and change the live document through Tylina tools so unsaved user edits and Undo are retained. ' +
         'Other filesystem tools and scripts use the Harness working directory and their edits arrive as external changes. ' +
         'Do not infer that a disconnected tool completed or retry an uncertain write without inspecting the current document.' }] }))

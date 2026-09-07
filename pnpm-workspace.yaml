@@ -34,8 +34,8 @@ minimumReleaseAgeExclude:
   - tylina-font-assets-8@0.4.0
   - tylina-font-assets-9@0.4.0
   - tylina-native-darwin-arm64@0.4.0 || 0.4.1
-  - tylina-sdk@0.4.0 || 0.4.1
-  - tylina-web-assets@0.4.0 || 0.4.1 || 0.4.2
+  - tylina-sdk@0.4.0 || 0.4.1 || 0.4.2
+  - tylina-web-assets@0.4.0 || 0.4.1 || 0.4.2 || 0.4.3
   - tylina-native-linux-arm64@0.4.1
   - tylina-native-linux-x64@0.4.1
   - tylina-native-win32-arm64@0.4.1

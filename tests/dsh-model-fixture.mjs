@@ -21,6 +21,14 @@ export function createModelFixture(ctx) {
       try {
         assert.ok(run, 'the fixture accepts only explicitly admitted test conversations')
         options.signal?.throwIfAborted()
+        if (run.seed) {
+          run.complete = true
+          yield { type: 'block-start', index: 0, blockType: 'text' }
+          yield { type: 'text-delta', index: 0, text: 'Ready to edit the document.' }
+          yield { type: 'block-end', index: 0, block: { type: 'text', text: 'Ready to edit the document.' } }
+          yield { type: 'finish', reason: { kind: 'stop' } }
+          return
+        }
         const cores = options.messages.filter((message) => message.source.kind === 'plugin' &&
           message.source.plugin === 'tylina' && message.source.form === 'instructions')
         run.requests.push({ instructions: cores.length, tools: options.tools.filter((tool) => tool.name.startsWith('tylina_')).length })
@@ -68,10 +76,10 @@ export function createModelFixture(ctx) {
     }
   }
   return {
-    begin(sessionId, marker) {
+    begin(sessionId, marker, { seed = false } = {}) {
       if (!registered) { ctx.llm.registerAdapter(['tylina-acceptance'], new Adapter()); registered = true }
       if (runs.get(sessionId)?.complete === false) throw new Error('The prior fixture turn is still running')
-      runs.set(sessionId, { marker, step: 0, requests: [], complete: false })
+      runs.set(sessionId, { marker, seed, step: 0, requests: [], complete: false })
     },
     read(sessionId) { return runs.get(sessionId) ?? null }
   }

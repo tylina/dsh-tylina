@@ -80,9 +80,10 @@ function EditorAction({ ctx, wide, t, integration }: Props) {
     const request = { sessionId: next.sessionId, follow, abort: new AbortController() }
     openingRequest.current = request
     opening.current = true; setBusy(true); setError(undefined)
+    let prepared: Awaited<ReturnType<typeof prepareHarnessProject>> | undefined
     try {
       if (currentDocument.current && !await currentDocument.current.editor.save()) throw new Error(t('saveFailed'))
-      const prepared = await prepareHarnessProject({ ...next, signal: request.abort.signal })
+      prepared = await prepareHarnessProject({ ...next, signal: request.abort.signal })
       if (!alive.current || !stillWanted()) return
       if (currentDocument.current && !await currentDocument.current.editor.save()) throw new Error(t('saveFailed'))
       if (!alive.current || !stillWanted()) return
@@ -93,6 +94,7 @@ function EditorAction({ ctx, wide, t, integration }: Props) {
           focusChat(next.sessionId)
         }
       })
+      prepared = undefined // The mounted document now owns the workspace lease.
       if (!alive.current || !stillWanted()) { editor.dispose(); return }
       currentDocument.current = editor; setSelection(next); setChanging(false); setChoosing(false)
       if (selectConversation) ctx.sessions.open(next.sessionId)
@@ -101,7 +103,7 @@ function EditorAction({ ctx, wide, t, integration }: Props) {
       if (stillWanted()) { report(failure); setChanging(!currentDocument.current) }
       return failure
     }
-    finally { if (openingRequest.current === request) openingRequest.current = undefined; opening.current = false; if (alive.current) setBusy(false) }
+    finally { prepared?.dispose(); if (openingRequest.current === request) openingRequest.current = undefined; opening.current = false; if (alive.current) setBusy(false) }
   }
   integration.onFileOpen = (sessionId, entry) => {
     const id = sessionId as SessionId

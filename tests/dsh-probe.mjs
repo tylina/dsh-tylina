@@ -1,10 +1,22 @@
 /** Installed only by dsh-bundles.mjs in its isolated, loopback acceptance profile. */
 import { createUserMessage } from '@deepseek-ai/dsh-llm/message'
 import { createModelFixture } from './dsh-model-fixture.mjs'
-export const inject = ['webServer', 'connection', 'sessionController', 'workspaceController', 'tools', 'llm']
+export const inject = ['webServer', 'connection', 'sessionController', 'workspaceController', 'sessions', 'tools', 'llm']
 export function apply(ctx) {
   let sequence = 0
   const model = createModelFixture(ctx)
+  const seed = async (sessionId, title) => {
+    model.begin(sessionId, 'Initialize document conversation', { seed: true })
+    await ctx.sessionController.selectModel({ sessionId, provider: 'tylina-acceptance', model: 'document-fixture' })
+    await ctx.sessionController.prompt({ requestId: `tylina-seed-${++sequence}`, sessionId, mode: 'queue',
+      content: [{ type: 'text', text: 'Prepare this document conversation.' }] }, new AbortController().signal)
+    const owner = await ctx.sessionController.resolveAgent(sessionId)
+    if ('error' in owner) throw new Error(owner.error.message)
+    await owner.agent.whenIdle()
+    if (!model.read(sessionId)?.complete) throw new Error('The initial model turn did not finish')
+    await ctx.sessionController.rename({ sessionId, title })
+    await ctx.sessions.flush(owner.agent.session)
+  }
   ctx.effect(() => ctx.webServer.register({ kind: 'exact', path: '/tylina-acceptance', async handler(request, response) {
     const rejection = ctx.connection.requestRejection(request)
     if (rejection !== undefined) { response.writeHead(rejection); response.end(); return }
@@ -16,11 +28,7 @@ export function apply(ctx) {
       if (input.action === 'bootstrap') {
         const { workspace } = await ctx.workspaceController.create({ path: process.cwd() })
         const created = await ctx.sessionController.create({ workspaceId: workspace.workspaceId })
-        await ctx.sessionController.rename({ sessionId: created.sessionId, title: 'Conversation A' })
-        const owner = await ctx.sessionController.resolveAgent(created.sessionId)
-        if ('error' in owner) throw new Error(owner.error.message)
-        owner.agent.session.append('turn/start', { turn: 1 })
-        owner.agent.session.append('turn/end', { turn: 1, reason: { kind: 'completed' } })
+        await seed(created.sessionId, 'Conversation A')
         response.writeHead(200, { 'Content-Type': 'application/json' }); response.end(JSON.stringify(created)); return
       }
       const result = await ctx.sessionController.resolveAgent(input.sessionId)
@@ -29,14 +37,7 @@ export function apply(ctx) {
       if (input.action === 'create-session') {
         await ctx.sessionController.rename({ sessionId: input.sessionId, title: 'Conversation A' })
         const created = await ctx.sessionController.create({ cwd: input.cwd })
-        await ctx.sessionController.rename({ sessionId: created.sessionId, title: 'Conversation B' })
-        const other = await ctx.sessionController.resolveAgent(created.sessionId)
-        if ('error' in other) throw new Error(other.error.message)
-        // Seed settled history through the real Session log; Harness hides non-current blank rows.
-        for (const session of [agent.session, other.agent.session]) {
-          session.append('turn/start', { turn: 1 })
-          session.append('turn/end', { turn: 1, reason: { kind: 'completed' } })
-        }
+        await seed(created.sessionId, 'Conversation B')
         response.writeHead(200, { 'Content-Type': 'application/json' }); response.end(JSON.stringify(created)); return
       }
       if (input.action === 'turn') {

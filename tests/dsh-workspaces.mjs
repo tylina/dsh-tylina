@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { randomUUID } from 'node:crypto'
 import { once } from 'node:events'
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile, symlink, truncate } from 'node:fs/promises'
 import { createServer } from 'node:http'
@@ -20,7 +21,7 @@ await require('esbuild').build({ entryPoints: [join(root, 'plugin/src/workspaces
   outfile: join(temporary, 'workspaces.cjs'), bundle: true, platform: 'node', format: 'cjs', target: 'node22' })
 const { createHarnessWorkspaces, resolveHarnessProject } = require(join(temporary, 'workspaces.cjs'))
 
-async function setup(t) {
+async function setup(t, mode = 'wasm') {
   const directory = await realpath(await mkdtemp(join(tmpdir(), 'tylina-harness-project-')))
   const ctx = new Context()
   await ctx.plugin(LocalFileSystem, { cwd: directory })
@@ -33,10 +34,11 @@ async function setup(t) {
     agents: { get(id) { return id === 'child' ? agent : undefined } }, sessionController: { async resolveAgent(id) {
     routed++
     return id === 'owner' ? { agent } : { error: { message: 'Unknown session' } }
-  } } }, 'wasm')
+  } } }, mode)
   const server = createServer((req, res) => { void projects.handle(req, res) })
   server.listen(0, '127.0.0.1'); await once(server, 'listening')
   const url = new URL(`http://127.0.0.1:${server.address().port}/tylina/project?session=owner&project=paper`)
+  url.searchParams.set('view', randomUUID())
   t.after(async () => { await projects.dispose(); await new Promise((resolve) => server.close(resolve)); await ctx.fiber.dispose(); await rm(directory, { recursive: true, force: true }) })
   await mkdir(join(directory, 'paper'))
   await writeFile(join(directory, 'paper', 'main.typ'), '\uFEFF= 原文\r\n')
@@ -69,6 +71,38 @@ test('released Harness filesystem maps a selected project into versioned source/
   const latest = await (await fetch(url)).json()
   assert.equal(latest.workspace.files['main.typ'], 'External shell edit')
   assert.notEqual(latest.revision, version)
+})
+
+for (const mode of ['wasm', 'native']) test(`${mode} discovers one directory and releases its workspace when the view closes`, async (t) => {
+  const { directory, url } = await setup(t, mode)
+  await mkdir(join(directory, 'paper', 'chapters'))
+  await writeFile(join(directory, 'paper', 'chapters', 'part.typ'), 'Nested document')
+  const first = await (await fetch(url)).json()
+  assert.deepEqual(first.workspace.filePaths, ['main.typ'])
+  const listing = new URL(url); listing.searchParams.set('directory', 'chapters')
+  const entries = await (await fetch(listing)).json()
+  assert.deepEqual(entries.map((entry) => entry.name), ['part.typ'])
+  const discovered = await (await fetch(url)).json()
+  assert.equal(discovered.revision, first.revision)
+  assert.ok(discovered.workspace.filePaths.includes('chapters/part.typ'))
+  assert.deepEqual(discovered.workspace.files, {})
+  const desired = structuredClone(first.workspace)
+  const reading = new URL(url); reading.searchParams.set('read', 'main.typ')
+  assert.equal((await fetch(reading)).status, 200)
+  desired.files['main.typ'] = 'Edited while discovery completes'
+  assert.equal((await fetch(url, { method: 'POST', headers: { Origin: url.origin, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ workspace: desired, revision: first.revision }) })).status, 200)
+  assert.equal(await readFile(join(directory, 'paper', 'chapters', 'part.typ'), 'utf8'), 'Nested document')
+  const current = await (await fetch(url)).json()
+  current.workspace.filePaths = current.workspace.filePaths.filter((path) => path !== 'chapters/part.typ')
+  assert.equal((await fetch(url, { method: 'POST', headers: { Origin: url.origin, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ workspace: current.workspace, revision: current.revision,
+      removals: { removedFiles: ['chapters/part.typ'], removedFolders: [] } }) })).status, 200)
+  await assert.rejects(readFile(join(directory, 'paper', 'chapters', 'part.typ')), { code: 'ENOENT' })
+  assert.equal((await fetch(url, { method: 'DELETE', headers: { Origin: url.origin } })).status, 204)
+  const reopened = await (await fetch(url)).json()
+  assert.notEqual(reopened.revision, current.revision)
+  assert.deepEqual(reopened.workspace.files, {}, 'the old materialized working set was released')
 })
 
 test('filesystem admission uses the Agent provider and rejects unmapped worlds, unknown sessions and escaping project paths', async (t) => {

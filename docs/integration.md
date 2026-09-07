@@ -61,7 +61,7 @@ Each native runtime manifest restricts installation to its actual OS and archite
 Install **one** variant into an existing Web profile:
 
 ```sh
-dsh plugin --profile web add /absolute/path/dsh-tylina-0.4.4.tgz
+dsh plugin --profile web add /absolute/path/dsh-tylina-0.4.5.tgz
 dsh --profile web
 ```
 
@@ -85,18 +85,22 @@ editor capabilities as local Workers. These implementations are supplied by npm,
 Harness project access uses the selected Agent's filesystem provider and requires an explicit host-directory
 mapping. No provider target keys are parsed as native paths. Snapshots preserve text encodings and binary bytes;
 directory enumeration skips symlinks and special files. VCS metadata and dependency directories are excluded.
-The WASM variant indexes directory metadata and reads requested bytes through Harness `fs.readBytes`.
+Both modes read requested bytes through Harness `fs.readBytes`; only the root and opened directories are indexed.
 Opening a project does not import unrelated binary files; Typst requests computed dependencies as needed.
 The browser working set is bounded to 4096 loaded files, 64 MiB per file and 128 MiB total.
-The metadata index allows up to 100,000 entries. Saving preserves indexed files whose bytes were never loaded.
+The metadata index is bounded to 16,384 entries across 512 visited directories, with at most 4096 children per directory.
+Saving uses explicit file/folder removal intents; missing entries in a partial index never authorize deletion.
 Explicit folder moves and downloads load their requested scope first and fail clearly if it exceeds the working set.
-The native variant currently transfers complete snapshots and retains the 4096-file/128-MiB project limit.
+View leases share one write queue per host directory. Closing the last view releases retained bytes and metadata
+after admitted operations finish. Hiding a view or reconnecting its tools preserves the lease. An idle timeout
+cleans up unreachable views; active saves cannot expire. Native mode needs the matching on-demand runtime release.
 For another host, implement the public [SDK workspace filesystem](https://www.npmjs.com/package/tylina-sdk):
 `stat`, `readDirectory`, `readFile`, opaque versions and cancellation. Host persistence is a separate versioned callback.
 Saving checks the previous content revision, publishes each file atomically and attempts guarded rollback if a
 later write fails. This is not a filesystem-wide transaction. An uncertain or conflicting write remains an error
 until the current disk contents are inspected and reconciled; it is never silently replayed.
-The native compiler receives complete memory snapshots and cannot opt into disk-backed workspace compilation.
+The native compiler receives the materialized memory working set and requests missing paths through the same
+host reader as WASM. It cannot opt into disk-backed workspace compilation.
 Every editor connection owns independent preview, command and language-service sessions.
 Disposing the editor destroys its native sessions. A tool socket disconnect rejects pending calls while preserving
 the document; “Reconnect Agent tools” explicitly restores tool registration without replaying previous calls.
@@ -179,10 +183,12 @@ cases, live-provider acceptance when configured and the broader product acceptan
 The public package names are `dsh-tylina` and `dsh-tylina-native`; `plugin/` is private
 implementation shared by the two bundles. Both publish only compiled output and bundled resources,
 with repository metadata, a public access setting and no runtime workspace dependencies.
-WASM and native bundles share one release version. Run `pnpm release:version <version>` to update
-all four workspace manifests together, then update the version shown in both READMEs. Build and
-packaging reject mismatched versions. Publish both packages and attach both archives to one GitHub
-release; unchanged SDK, assets and platform binaries keep their own versions.
+The source workspace shares one candidate version. Run `pnpm release:version <version>` to update
+all four manifests together. Build and packaging reject mismatched candidate versions. Publication
+can be staged: 0.4.5 ships the WASM bundle first; the native bundle remains unpublished until its
+matching cross-platform runtimes are ready. The published native version is still 0.4.4. Update
+the native runtime dependencies before publishing that candidate. SDK, assets and platform binaries
+keep independent versions, and release notes must identify which bundles are actually available.
 
 `pnpm pack:bundles` and `pnpm verify:packages` are the release gate before publishing a tarball.
 No npm publication happens during build or CI.

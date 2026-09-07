@@ -8,7 +8,7 @@ export interface HarnessDocument {
   mcpConfiguration(): ReturnType<ReturnType<typeof connectHarnessEditor>['mcpConfiguration']>
   dispose(): void
 }
-interface PreparedProject { url: URL; initial: ProjectSnapshot; preferenceKey: string }
+interface PreparedProject { url: URL; initial: ProjectSnapshot; preferenceKey: string; dispose(): void }
 
 function socketUrl(path: string): URL {
   const url = new URL(path, location.href)
@@ -28,6 +28,7 @@ async function projectRequest(url: URL, init: RequestInit): Promise<Response> {
 export async function prepareHarnessProject(options: { sessionId: string; project: string; entry?: string; signal?: AbortSignal }): Promise<PreparedProject> {
   const url = new URL('/tylina/project', location.href)
   url.searchParams.set('session', options.sessionId)
+  url.searchParams.set('view', crypto.randomUUID())
   if (options.project) url.searchParams.set('project', options.project)
   const preferenceKey = `tylina.dsh.project.${JSON.stringify([options.sessionId, options.project])}`
   try {
@@ -36,11 +37,21 @@ export async function prepareHarnessProject(options: { sessionId: string; projec
     if (typeof preference?.activeFile === 'string') url.searchParams.set('file', preference.activeFile)
   } catch { /* Navigation preferences are optional, not document storage. */ }
   if (options.entry) url.searchParams.set('entry', options.entry)
-  const initial = await (await projectRequest(url, { signal: options.signal })).json() as ProjectSnapshot
-  url.searchParams.delete('entry')
-  if (initial.workspace.mainFile) url.searchParams.set('main', initial.workspace.mainFile)
-  if (initial.workspace.activeFile) url.searchParams.set('file', initial.workspace.activeFile)
-  return { url, initial, preferenceKey }
+  let released = false
+  const dispose = () => {
+    if (released) return
+    released = true; options.signal?.removeEventListener('abort', dispose)
+    void fetch(url, { method: 'DELETE', credentials: 'same-origin', redirect: 'error', cache: 'no-store', keepalive: true }).catch(() => undefined)
+  }
+  options.signal?.addEventListener('abort', dispose, { once: true })
+  try {
+    const initial = await (await projectRequest(url, { signal: options.signal })).json() as ProjectSnapshot
+    options.signal?.throwIfAborted()
+    url.searchParams.delete('entry')
+    if (initial.workspace.mainFile) url.searchParams.set('main', initial.workspace.mainFile)
+    if (initial.workspace.activeFile) url.searchParams.set('file', initial.workspace.activeFile)
+    return { url, initial, preferenceKey, dispose }
+  } catch (error) { dispose(); throw error }
 }
 
 export async function openHarnessDocument(container: HTMLElement, options: {
@@ -54,11 +65,13 @@ export async function openHarnessDocument(container: HTMLElement, options: {
   let timer: ReturnType<typeof setTimeout> | undefined
   let closed = false
   let reconnecting: Promise<void> | undefined
+  // SDK disposal rejects pending work. A retired view cannot report into its replacement's UI.
+  const report = (error: Error) => { if (!closed && !lifetime.signal.aborted && !options.signal?.aborted) options.onError(error) }
   const editor = await createTylinaEditor(container, {
     signal: options.signal,
     editorUrl: new URL('/tylina/embed.html', location.href), workspace: decodeWorkspace(initial.workspace),
     workspaceRevision: revision, tools: true,
-    fileSystem: initial.mode === 'wasm' ? { async readFile(path, signal) {
+    fileSystem: { async readFile(path, signal) {
       const fileUrl = new URL(url); fileUrl.searchParams.set('read', path)
       const response = await fetch(fileUrl, { credentials: 'same-origin', redirect: 'error', cache: 'no-store',
         signal: AbortSignal.any([lifetime.signal, ...signal ? [signal] : []]) })
@@ -68,11 +81,14 @@ export async function openHarnessDocument(container: HTMLElement, options: {
         throw new Error(body?.error ?? `Could not read workspace file (${response.status})`)
       }
       return { bytes: new Uint8Array(await response.arrayBuffer()), version: response.headers.get('X-Tylina-File-Version') ?? '' }
-    } } : undefined, onError: options.onError, onOpenAgent: options.onOpenAgent,
-    createRuntime: initial.mode === 'native' ? () => createWebSocketRuntime(socketUrl('/tylina/runtime'), options.onError) : undefined,
+    }, async readDirectory(path, signal) {
+      const directoryUrl = new URL(url); directoryUrl.searchParams.set('directory', path)
+      return (await projectRequest(directoryUrl, { signal: AbortSignal.any([lifetime.signal, ...signal ? [signal] : []]) })).json()
+    } }, onError: report, onOpenAgent: options.onOpenAgent,
+    createRuntime: initial.mode === 'native' ? () => createWebSocketRuntime(socketUrl('/tylina/runtime'), report) : undefined,
     async onSave(workspace, context) {
       const response = await projectRequest(url, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workspace: encodeWorkspace(workspace), revision: context.revision }),
+        body: JSON.stringify({ workspace: encodeWorkspace(workspace), revision: context.revision, removals: context.removals }),
         signal: AbortSignal.any([context.signal, lifetime.signal]) })
       const acknowledgment = await response.json() as { revision: string }
       revision = acknowledgment.revision
@@ -82,7 +98,7 @@ export async function openHarnessDocument(container: HTMLElement, options: {
       catch { /* Saving actual project bytes does not depend on optional navigation preferences. */ }
       return acknowledgment
     }
-  })
+  }).catch((error) => { lifetime.abort(); options.prepared.dispose(); throw error })
   const refresh = async () => {
     const expectedRevision = revision
     try {
@@ -93,7 +109,7 @@ export async function openHarnessDocument(container: HTMLElement, options: {
       await editor.refreshWorkspace(decodeWorkspace(next.workspace), { expectedRevision, revision: next.revision })
       if (revision === expectedRevision) revision = next.revision
     } catch (error) {
-      if (!closed && revision === expectedRevision) options.onError(error instanceof Error ? error : new Error(String(error)))
+      if (revision === expectedRevision) report(error instanceof Error ? error : new Error(String(error)))
     } finally { if (!closed) timer = setTimeout(() => { void refresh() }, 1000) }
   }
   const reconnectTools = (): Promise<void> => {
@@ -102,16 +118,16 @@ export async function openHarnessDocument(container: HTMLElement, options: {
       await tools?.release()
       if (closed) throw new Error('The Harness document is closed')
       tools = connectHarnessEditor({ url: socketUrl('/tylina/editor'), sessionId: options.sessionId, project: options.project,
-        editor, onDisconnect: options.onError })
+        editor, onDisconnect: report })
       await tools.ready
     })().finally(() => { reconnecting = undefined })
   }
   const dispose = () => {
     if (closed) return
-    closed = true; clearTimeout(timer); lifetime.abort(); tools?.dispose(); editor.dispose()
+    closed = true; clearTimeout(timer); lifetime.abort(); tools?.dispose(); editor.dispose(); options.prepared.dispose()
   }
   // A tools connection failure preserves the editable project and its unsaved input.
-  void reconnectTools().catch(options.onError)
+  void reconnectTools().catch(report)
   timer = setTimeout(() => { void refresh() }, 1000)
   return { editor, reconnectTools, dispose, mcpConfiguration() {
     if (!tools) throw new Error('The document tools are not connected')

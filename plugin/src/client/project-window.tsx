@@ -29,19 +29,20 @@ function ProjectWindow() {
   const toolConnection = useToolReconnect(() => current.current, report)
   useEffect(() => {
     let alive = true
+    const abort = new AbortController()
     const open = async () => {
       const project = { sessionId: params.get('session') ?? '', project: params.get('project') ?? '' }
       if (!project.sessionId) throw new Error(t('noSession'))
-      const prepared = await prepareHarnessProject(project)
-      if (!alive) return
-      const doc = await openHarnessDocument(container.current!, { ...project, prepared,
+      const prepared = await prepareHarnessProject({ ...project, signal: abort.signal })
+      if (!alive) { prepared.dispose(); return }
+      const doc = await openHarnessDocument(container.current!, { ...project, prepared, signal: abort.signal,
         onError: (error) => { if (alive) report(error) }, onOpenAgent: () => contact('chat') })
       if (!alive) { doc.dispose(); return }
       current.current = doc
     }
     setBusy(true); setError(undefined)
     void open().catch((error) => { if (alive) report(error) }).finally(() => { if (alive) setBusy(false) })
-    const dispose = () => { alive = false; current.current?.dispose(); current.current = undefined }
+    const dispose = () => { alive = false; abort.abort(); current.current?.dispose(); current.current = undefined }
     window.addEventListener('pagehide', dispose, { once: true })
     return () => { window.removeEventListener('pagehide', dispose); dispose() }
   }, [attempt])

@@ -22,8 +22,8 @@ importers:
         specifier: 7.0.6
         version: 7.0.6
       tylina-web-assets:
-        specifier: 0.4.2
-        version: 0.4.2
+        specifier: 0.4.3
+        version: 0.4.3
 
   bundle-native:
     dependencies:
@@ -43,8 +43,8 @@ importers:
         specifier: ^0.18.0
         version: 0.18.0(dafc22554809c366964d5771706df681)
       tylina-web-assets:
-        specifier: 0.4.2
-        version: 0.4.2
+        specifier: 0.4.3
+        version: 0.4.3
       ws:
         specifier: ^8.18.3
         version: 8.21.3
@@ -96,8 +96,8 @@ importers:
         specifier: ^0.18.0
         version: 0.18.0(dafc22554809c366964d5771706df681)
       tylina-web-assets:
-        specifier: 0.4.2
-        version: 0.4.2
+        specifier: 0.4.3
+        version: 0.4.3
       ws:
         specifier: ^8.18.3
         version: 8.21.3
@@ -212,11 +212,11 @@ importers:
         specifier: 18.3.1
         version: 18.3.1(react@18.3.1)
       tylina-sdk:
-        specifier: 0.4.1
-        version: 0.4.1
-      tylina-web-assets:
         specifier: 0.4.2
         version: 0.4.2
+      tylina-web-assets:
+        specifier: 0.4.3
+        version: 0.4.3
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -2153,11 +2153,11 @@ packages:
     cpu: [arm64]
     os: [win32]
 
-  tylina-sdk@0.4.1:
-    resolution: {integrity: sha512-yKDp+dDWa/aGmmBfa+QA9BefBTRttxnYUrIw3VTj0OYusl2XwjofXxazbgf5hoU6zHkIYGAwE2BmMtkBWeIhVA==}
+  tylina-sdk@0.4.2:
+    resolution: {integrity: sha512-PotjKf8Xv2xu0r/soIQvCdnaOv6Y+DoM0nWZG8RdECuZ8pjKQaWBE8TtB6/VneBpPxQ/5X6qBsPYHGwWGPgp2w==}
 
-  tylina-web-assets@0.4.2:
-    resolution: {integrity: sha512-ykQ6Tc9CSBzAsYUue72AVRa3O41nu/ATzWTEsSY8FTtkrPbrJAhgnzEg/xIjzJP9Y7feiPAY3ybjA5zwjY5PKw==}
+  tylina-web-assets@0.4.3:
+    resolution: {integrity: sha512-nLWiIbDDp9SiZeXE+HSu8a/YdVtFPJKG2TQJOABt6LcoWP4wZjk+pPSdFs+ufnWd7fsDaFHcfpuD84V54cg9rQ==}
 
   typescript@6.0.3:
     resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
@@ -4512,11 +4512,11 @@ snapshots:
   tylina-native-win32-arm64@0.4.1:
     optional: true
 
-  tylina-sdk@0.4.1:
+  tylina-sdk@0.4.2:
     dependencies:
       zod: 4.4.3
 
-  tylina-web-assets@0.4.2:
+  tylina-web-assets@0.4.3:
     dependencies:
       tylina-font-assets-1: 0.4.0
       tylina-font-assets-10: 0.4.0

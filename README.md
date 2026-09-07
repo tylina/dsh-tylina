@@ -29,13 +29,13 @@ dsh plugin --profile web update dsh-tylina@latest
 
 Click **Tylina** to open the current conversation’s workspace automatically. Double-click a `.typ` file,
 or ask your agent to set the main document. Switch conversations and the editor follows; pin it to stay in one workspace.
-WASM reads only requested files, including Typst dependencies. The header also offers a separate window.
+WASM lists folders as you expand them and reads only requested files, including Typst dependencies. The header also offers a separate window.
 With Better Sidebar installed, Tylina joins its tabs; otherwise it provides its own resizable sidebar.
 
 <details>
 <summary><strong>Native edition, requirements, and switching</strong></summary>
 
-Both editions are **0.4.4** and share the same release cycle. Choose browser WASM or native compilation on the Harness host.
+The browser edition is **0.4.5**; the published native edition remains **0.4.4** while its matching platform update is being validated. Choose browser WASM or native compilation on the Harness host.
 
 | Package | Compilation runs in | Choose it for |
 | --- | --- | --- |

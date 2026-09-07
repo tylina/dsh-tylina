@@ -1,6 +1,6 @@
 {
   "name": "@tylina/dsh-workspace",
-  "version": "0.4.2",
+  "version": "0.4.4",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.9.0",
@@ -8,6 +8,7 @@
     "node": ">=22.19.0"
   },
   "scripts": {
+    "release:version": "node scripts/version.mjs",
     "typecheck": "pnpm --filter @tylina/dsh-plugin typecheck && pnpm --filter dsh-tylina-native typecheck",
     "build": "node scripts/build.mjs",
     "build:wasm": "node scripts/build.mjs wasm",

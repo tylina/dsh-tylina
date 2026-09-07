@@ -1,6 +1,6 @@
 {
   "name": "dsh-tylina",
-  "version": "0.4.2",
+  "version": "0.4.4",
   "type": "module",
   "license": "UNLICENSED",
   "description": "Tylina wasm runtime bundle for DeepSeek Harness",

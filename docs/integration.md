@@ -61,11 +61,11 @@ Each native runtime manifest restricts installation to its actual OS and archite
 Install **one** variant into an existing Web profile:
 
 ```sh
-dsh plugin --profile web add /absolute/path/dsh-tylina-0.4.2.tgz
+dsh plugin --profile web add /absolute/path/dsh-tylina-0.4.4.tgz
 dsh --profile web
 ```
 
-For native compilation, install `dsh-tylina-native-0.4.3.tgz` instead.
+For native compilation, install `dsh-tylina-native-0.4.4.tgz` instead.
 Remove the previous variant with `dsh plugin --profile web remove dsh-tylina` before switching.
 The bundles use the same `tylina` configuration row and must not be stacked together.
 Custom profiles must contain `@deepseek-ai/dsh-base` and `@deepseek-ai/dsh-web-app` before the Tylina bundle.
@@ -179,6 +179,11 @@ cases, live-provider acceptance when configured and the broader product acceptan
 The public package names are `dsh-tylina` and `dsh-tylina-native`; `plugin/` is private
 implementation shared by the two bundles. Both publish only compiled output and bundled resources,
 with repository metadata, a public access setting and no runtime workspace dependencies.
+WASM and native bundles share one release version. Run `pnpm release:version <version>` to update
+all four workspace manifests together, then update the version shown in both READMEs. Build and
+packaging reject mismatched versions. Publish both packages and attach both archives to one GitHub
+release; unchanged SDK, assets and platform binaries keep their own versions.
+
 `pnpm pack:bundles` and `pnpm verify:packages` are the release gate before publishing a tarball.
 No npm publication happens during build or CI.
 

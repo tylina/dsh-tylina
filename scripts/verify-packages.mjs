@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import { join } from 'node:path'
 import { root, assetsRoot } from '../source.mjs'
+execFileSync(process.execPath, ['scripts/version.mjs', '--check'], { cwd: root })
 const assetsVersion = JSON.parse(readFileSync(join(assetsRoot, 'package.json'), 'utf8')).version
 const release = join(root, 'release')
 const { artifacts } = JSON.parse(readFileSync(join(release, 'manifest.json'), 'utf8'))

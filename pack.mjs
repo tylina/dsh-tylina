@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url'
 import { join } from 'node:path'
 
 const root = fileURLToPath(new URL('./', import.meta.url))
+const check = spawnSync(process.execPath, ['scripts/version.mjs', '--check'], { cwd: root, stdio: 'inherit' })
+if (check.status !== 0) process.exit(check.status ?? 1)
 const destination = join(root, 'release')
 await mkdir(destination, { recursive: true })
 const artifacts = []

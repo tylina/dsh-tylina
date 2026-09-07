@@ -35,7 +35,7 @@ With Better Sidebar installed, Tylina joins its tabs; otherwise it provides its 
 <details>
 <summary><strong>Native edition, requirements, and switching</strong></summary>
 
-The WASM edition is **0.4.2**; the native edition is **0.4.3**. Choose browser WASM or native compilation on the Harness host.
+Both editions are **0.4.4** and share the same release cycle. Choose browser WASM or native compilation on the Harness host.
 
 | Package | Compilation runs in | Choose it for |
 | --- | --- | --- |

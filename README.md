@@ -1,183 +1,82 @@
-# Tylina for DeepSeek Harness
+<p align="center"><img src="docs/media/tylina.svg" width="72" alt="Tylina"></p>
+<h1 align="center">Tylina for DeepSeek Harness</h1>
+<p align="center"><strong>Beautiful documents, right beside your agent.</strong></p>
+<p align="center"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
+<p align="center"><a href="https://tylina.github.io/">Website</a> · <a href="https://tylina.github.io/app/">Try the Web editor</a> · <a href="#install--update">Install</a></p>
 
-Two self-contained profile bundles mount the same Web editor in the Harness sidebar:
+Edit typeset Typst documents inside DeepSeek Harness. Share a workspace with your agent, from first draft to finished PDF.
 
-- `dsh-tylina`: compilation and Tinymist language services run in the browser's Workers.
-- `dsh-tylina-native`: the Node host runs the packaged Tinymist executables through an authenticated WebSocket.
-  npm selects a separately packaged runtime for the user's operating system and CPU architecture.
+![An academic presentation open beside the DeepSeek Harness conversation](docs/media/harness-slides.png)
 
-Both reuse the complete built Web application, templates, fonts and renderer from shared npm resource dependencies.
-Both also register every bundled Typst domain in Harness's Skills catalog using its released filesystem provider.
-The complete Desktop Skills tree, including references, scripts and template resources, is provided by the shared resource package.
-Bodies are loaded on demand; the Tylina provider adds no project/user roots or filesystem watchers.
-The editor's source, resources, history, menus and persistence use the existing shared implementations.
-The default right panel sits beside the conversation and can be resized with the pointer or keyboard.
-Hiding the panel preserves its editing session, Undo and Agent tools. Narrow windows show one surface at a time.
+- **Edit the finished page.** Click and write on the typeset document; use Split or Source Lens for precise source control.
+- **Create with your agent.** Share the conversation's workspace, document tools, Typst Skills, and MCP. Harness owns the model and chat.
+- **Go from template to delivery.** Templates, fonts, Slides Mode, presenter view, and PDF export are part of the same editor.
 
-Open Tylina, choose or create a Harness conversation, and open its working directory or a project within it.
-The file list opens first when no main file has been selected; double-click the document to use as main.
-Source edits save to the actual Harness project in both variants. External script and filesystem edits appear
-through the editor's normal conflict handling and Undo. The project remains bound to the selected conversation
-while editing. The dock follows conversation changes after saving the current document; save failures retain
-the current editor and show the problem. API-created sessions receive the Workspace registration that Harness's
-chat composer requires, using the same existing session identity and actual working directory.
-“Focus this conversation” keeps the document running while showing its chat.
-“Open in separate window” saves before handing the project and exclusive tools to a standalone window.
-A blocked popup or failed save keeps the current editor. “Return to sidebar” saves and hands the project back.
-Window handoff recreates the editor and compiler: saved files, resources and main/active file selection survive,
-but its in-memory Undo stack does not cross windows. A detached window stays bound to its original conversation.
-The separate “Browser drafts” entry opens the standalone editor with browser storage.
+## Install & update
 
-## Build and install
+> Version 0.4.1 is being prepared for npm. The installation commands below become available after publication.
 
-This repository builds with Node.js 22.19+ (or Node.js 24), pnpm 11.9 and Git.
-It installs only published npm artifacts: `tylina-sdk`, `tylina-web-assets` and an optional
-platform-specific native runtime. No Tylina core checkout, repository credential, Rust compiler
-or wasm-pack is needed, including in CI and fork pull requests.
+Already using DeepSeek Harness? Install the browser WASM edition:
 
 ```sh
-git clone https://github.com/tylina/dsh-tylina.git
-cd dsh-tylina
-pnpm install --frozen-lockfile
-pnpm typecheck
-pnpm test
-pnpm build:wasm
+dsh plugin --profile web add dsh-tylina
+dsh web
 ```
 
-The SDK contains compiled adapters and public API declarations. Web resources contain the compiled
-application, WASM, fonts, templates and Skills. Native runtime packages contain executable binaries.
-Core TypeScript/Rust sources and source maps are excluded from those packages.
-Update the exact npm dependency versions and lockfile to upgrade Tylina.
-The native entry resolves a separate runtime for Linux, macOS and Windows on x64 or arm64.
-Each runtime is built and smoke-tested on its matching platform before distribution.
-
-`pnpm build:wasm` builds only the browser bundle; `pnpm build:native` builds the native variant.
-`release/` contains both `.tgz` bundles and a manifest with byte counts and SHA-256.
-Each native runtime manifest restricts installation to its actual OS and architecture.
-
-Install **one** variant into an existing Web profile:
+Update:
 
 ```sh
-dsh plugin --profile web add /absolute/path/dsh-tylina-0.4.0.tgz
-dsh --profile web
+dsh plugin --profile web update dsh-tylina@latest
 ```
 
-For native compilation, install `dsh-tylina-native-0.4.0.tgz` instead.
-Remove the previous variant with `dsh plugin --profile web remove dsh-tylina` before switching.
-The bundles use the same `tylina` configuration row and must not be stacked together.
-Custom profiles must contain `@deepseek-ai/dsh-base` and `@deepseek-ai/dsh-web-app` before the Tylina bundle.
+Click **Tylina** → choose or create a Harness conversation → open its project → double-click the main `.typ` file.
+The document opens beside your conversation. The header also offers a separate window.
+With Better Sidebar installed, Tylina joins its tabs; otherwise it provides its own resizable sidebar.
 
-There are no install scripts, source-checkout requirements or compiler binary downloads.
-The platform runtime tarballs preserve executable permissions through pnpm's `publishConfig.executableFiles`.
-The integration currently targets the released Harness `0.1.2-rc.1` plugin contracts.
+<details>
+<summary><strong>Native edition, requirements, and switching</strong></summary>
 
-## Ownership
+| Package | Compilation runs in | Choose it for |
+| --- | --- | --- |
+| `dsh-tylina` | WASM Workers in your browser | A portable setup without native Typst executables |
+| `dsh-tylina-native` | Native processes on the Harness host | Native compilation performance |
 
-`plugin/src` owns the shared Cordis registration, dock, window handoff, static serving and socket adapter.
-Each distribution bundles that implementation under its own client factory identity.
-`packages/node-runtime` owns native LSP, compiler processes, filesystem snapshots and conditional publication;
-`packages/embed` owns the browser socket carrier and versioned workspace callbacks.
-`packages/browser-host` converts that carrier into the same capabilities as local Workers.
-Electron retains its own binary discovery and IPC adapters.
-
-Harness project access uses the selected Agent's filesystem provider and requires an explicit host-directory
-mapping. No provider target keys are parsed as native paths. Snapshots preserve text encodings and binary bytes;
-project-owned symlinks and special files are rejected. VCS metadata and dependency directories are excluded.
-The limits are 4096 files, 64 MiB per file and 128 MiB per workspace. Choose a smaller document subdirectory when needed.
-Saving checks the previous content revision, publishes each file atomically and attempts guarded rollback if a
-later write fails. This is not a filesystem-wide transaction. An uncertain or conflicting write remains an error
-until the current disk contents are inspected and reconciled; it is never silently replayed.
-The native compiler receives complete memory snapshots and cannot opt into disk-backed workspace compilation.
-Every editor connection owns independent preview, command and language-service sessions.
-Disposing the editor destroys its native sessions. A tool socket disconnect rejects pending calls while preserving
-the document; “Reconnect Agent tools” explicitly restores tool registration without replaying previous calls.
-
-The bound Agent receives the shared 18-tool catalog, including current unsaved file reads, version-checked writes,
-Typst validation, semantic document queries, templates, Skills and actual rendered image attachments.
-The ordinary Harness Agent owns model configuration, keys and chat. Opening a document queues the shared authoring
-instructions but does not start inference. Tool registration is session scoped and exclusively owned by one editor.
-Both bundles expose the complete Desktop Skill scripts in the Harness filesystem. `tylina_tool_runtime` supplies
-the actual project and Skill roots and an isolated uv environment. It prefers installed system uv; when absent,
-an explicit tool request starts managed background installation using the shared Desktop installer.
-
-App routes and socket upgrades reuse Harness Connection authentication and Host/Origin checks.
-The plugin adds no unauthenticated process endpoint, arbitrary network proxy or application launcher.
-Use the normal Harness authenticated URL to log in before opening `/tylina/` directly.
-
-## MCP clients
-
-The plug icon in the document header opens **Connect an MCP client**. Copy the configuration into a
-Streamable HTTP MCP client to use the same 18 live document tools and authoring instructions.
-Harness already receives these tools directly; this connection is for another client and does not duplicate
-the Harness Agent's tool catalog. Tools read the live editor, retain version-checked file writes and Undo,
-and use the same compiler, templates and packaged Skills as the ordinary Harness tools.
-
-The exported configuration uses the common `mcpServers` wrapper, with an HTTP `url` and an `Authorization`
-header. Adapt the outer configuration key if your client uses another format (for example VS Code's `servers`).
-The key grants access to this document project only. Keep the editor open; hiding its sidebar is fine.
-Closing, reconnecting, changing projects or moving the document between windows revokes that configuration.
-Copy a new one after reconnecting. An old client never silently follows a different project.
-
-The key is generated in memory for each editor connection and sent to its authenticated browser only.
-It is not the Harness login credential and never enters workspace files, preferences or share URLs.
-Machine clients still pass the Harness Host/Origin fence. MCP 2025 protocol sessions retain cancellation
-correlation; modern clients use the SDK's per-request transport. Closing an editor cancels both.
-Requests and concurrent clients have bounded size and count; uncertain mutations are never replayed by Tylina.
-
-## Acceptance
-
-After packaging, with the supported `dsh` executable available:
+Both share the editor, workspace, templates, and tools. Native packages target macOS, Windows, and Linux on x64/arm64; Linux requires glibc.
+Install one edition per profile. To switch to native:
 
 ```sh
-pnpm test:installed
+dsh plugin --profile web remove dsh-tylina
+dsh plugin --profile web add dsh-tylina-native
 ```
 
-This installs the tarballs into isolated profiles, launches the real Harness, and opens Chromium.
-It verifies authentication, actual project and Agent instances, compilation and formatting, CRLF preservation,
-Source input, disk saves, external edits and exact Undo/Redo, hidden-editor image attachments, real system uv,
-pending instructions, reload and native process cleanup. A deterministic streaming model adapter then drives
-the actual Agent loop through reading, editing, validation, PDF export to the project and image rendering.
-The next model request must receive each real tool result. The suite replaces the actual Session message surface
-as compaction does and repeats the turn, verifying that authoring instructions remain present exactly once.
-The model fixture and authenticated test probe are not distributed. No model API key or live provider inference
-is involved; the test controls model output and the summary text, while Harness owns its actual loop and history.
-It also exercises the dock beside an editable chat, pointer/keyboard resizing, narrow-screen focus isolation,
-blocked popups, rejected project saves with unsaved text retained, separate-window edits and return to the dock.
-Switching between two real conversations transfers tools and restores each project's main file without changing
-the other project's bytes. A completed-history fixture makes those conversations visible in Harness navigation.
-Screenshots and isolated profile logs live under `.benchmarks`. Set `TYLINA_DSH_OFFLINE=1` only when all exact
-dependencies are already in the local pnpm store; ordinary acceptance allows dependency downloads.
-The installed suite also copies the actual MCP configuration and uses the official SDK to verify scoped
-workspace reads, writes, compilation, images, Skills, templates and revocation. The transport suite is
-`node --test tests/dsh-mcp.mjs`; it checks both protocol eras, authentication,
-schema rejection and cancellation. Bundles include notices for the server dependencies actually embedded.
-`node --test tests/dsh-skills.mjs` also checks discovery, exact bodies and disposal
-against the real released Cordis and Skill registry.
-`node --test tests/dsh-tools.mjs tests/dsh-editor-connection.mjs`
-checks the shared 18-tool catalog against the released Harness registry and the authenticated editor
-connection over real sockets, including session isolation, cancellation and teardown. These boundary
-tests do not invoke a model or prove the installed Agent loop.
+Native updates: `dsh plugin --profile web update dsh-tylina-native@latest`.
+Verified with Harness `0.1.2-rc.1`, Node.js 22.19+ or 24, and pnpm 11.9.
+Restart a running Harness after installation or updates.
 
-`node --test tests/node-workspace.mjs tests/dsh-workspaces.mjs`
-checks actual filesystem snapshots and publication, lost acknowledgments, rollback, path boundaries, provider
-mapping and authenticated HTTP project access against the released Harness filesystem.
+</details>
 
-The remaining integration work is tracked in the issue tracker: additional project and session recovery
-cases, live-provider acceptance when configured and the broader product acceptance matrix.
+## What will you make?
 
-## npm distribution
+Start with a template, then shape it through conversation and direct editing. These are real compiled template examples.
 
-The public package names are `dsh-tylina` and `dsh-tylina-native`; `plugin/` is private
-implementation shared by the two bundles. Both publish only compiled output and bundled resources,
-with repository metadata, a public access setting and no runtime workspace dependencies.
-`pnpm pack:bundles` and `pnpm verify:packages` are the release gate before publishing a tarball.
-No npm publication happens during build or CI.
+<table>
+<tr><td align="center" width="50%"><strong>Résumé</strong><br><a href="https://tylina.github.io/#scenes"><img src="docs/media/cv-basic-resume.png" height="210" alt="Résumé"></a></td><td align="center" width="50%"><strong>Poster</strong><br><a href="https://tylina.github.io/#scenes"><img src="docs/media/poster-pollux.png" height="210" alt="Poster"></a></td></tr>
+<tr><td align="center" width="50%"><strong>Academic slides</strong><br><a href="https://tylina.github.io/#scenes"><img src="docs/media/slides-botanical-7.png" height="210" alt="Academic slides"></a></td><td align="center" width="50%"><strong>Charts</strong><br><a href="https://tylina.github.io/#scenes"><img src="docs/media/chart-area.png" height="210" alt="Charts"></a></td></tr>
+<tr><td align="center" width="50%"><strong>Paper</strong><br><a href="https://tylina.github.io/#scenes"><img src="docs/media/paper-accelerated-jacow.png" height="210" alt="Paper"></a></td><td align="center" width="50%"><strong>Notes</strong><br><a href="https://tylina.github.io/#scenes"><img src="docs/media/note-bananote.png" height="210" alt="Notes"></a></td></tr>
+<tr><td align="center" width="50%"><strong>Report</strong><br><a href="https://tylina.github.io/#scenes"><img src="docs/media/report.png" height="210" alt="Report"></a></td><td align="center" width="50%"><strong>Book</strong><br><a href="https://tylina.github.io/#scenes"><img src="docs/media/book-min-book.png" height="210" alt="Book"></a></td></tr>
+</table>
 
-`dsh-tylina-native` is a universal plugin entry. Its optional dependencies select an independent
-`tylina-native-<platform>-<arch>` package, each restricted by npm `os`/`cpu` metadata. The plugin
-checks the installed runtime identity before launching executables and reports missing dependencies
-or unsupported platforms explicitly. It never launches another platform's binary or downloads executables
-from a mutable URL. Windows runtime packages use `.exe` names; POSIX executables retain execute permission.
+[Explore Tylina](https://tylina.github.io/) · [Watch the editing demo](https://tylina.github.io/demo/) · [Template and screenshot credits](docs/media/ATTRIBUTIONS.md)
 
-Licensing is inherited from Tylina (`UNLICENSED`); third-party notices are included separately.
-Publishing preserves that existing license; it does not change the core source visibility.
+## Try asking your agent
+
+> Turn the paper in this workspace into a 10-slide research talk. Keep the citations, add speaker notes, review the layout, and export a PDF.
+
+> Turn my experience into a one-page résumé with a clear hierarchy and an emphasis on project outcomes.
+
+Documents remain standard `.typ` source and resources that you can edit locally. Model requests use your configured
+Harness provider. Tylina requires no account and adds no model proxy server.
+
+[Development & builds](docs/integration.md#build-and-install) · [Connect MCP clients](docs/integration.md#mcp-clients) · [Report an issue](https://github.com/tylina/dsh-tylina/issues)
+
+<sub>Tylina is proprietary software. This repository provides the Harness integration; the core is distributed as compiled npm dependencies. Third-party templates and fonts retain their own licenses.</sub>

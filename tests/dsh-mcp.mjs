@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process'
+import { execFile, spawn } from 'node:child_process'
 import { promisify } from 'node:util'
 import { commandInput } from './command-input.mjs'
 import assert from 'node:assert/strict'
@@ -8,12 +8,14 @@ import { createServer, request as httpRequest } from 'node:http'
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { createInterface } from 'node:readline'
 import { after, test } from 'node:test'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const require = createRequire(join(root, 'plugin/package.json'))
 const desktop = createRequire(join(root, 'package.json'))
 const { Client, StreamableHTTPClientTransport } = desktop('@modelcontextprotocol/client')
+const { StdioClientTransport } = desktop('@modelcontextprotocol/client/stdio')
 await mkdir(join(root, '.benchmarks'), { recursive: true })
 const temporary = await mkdtemp(join(root, '.benchmarks/dsh-mcp-'))
 after(() => rm(temporary, { recursive: true, force: true }))
@@ -128,12 +130,127 @@ test('SDK CLI uses the same authenticated command protocol and preserves failure
     const options = { env: { ...process.env, TYLINA_MCP_URL: new URL(bound.connection.path, env.origin).href,
       TYLINA_MCP_TOKEN: bound.connection.token }, timeout: 20_000 }
     try {
-      const help = await run(process.execPath, [process.env.TYLINA_SDK_CLI, 'help'], options)
-      assert.ok(JSON.parse(help.stdout).structuredContent.commands.some((item) => item.command === 'editor.state'))
+      // The host admits at most eight legacy sessions. One-shot CLI calls must release their slot.
+      for (let i = 0; i < 10; i++) {
+        const help = await run(process.execPath, [process.env.TYLINA_SDK_CLI, 'help'], options)
+        assert.ok(JSON.parse(help.stdout).structuredContent.commands.some((item) => item.command === 'editor.state'))
+      }
       const read = await run(process.execPath, [process.env.TYLINA_SDK_CLI, 'file.read', '--args', JSON.stringify({ file: 'notes.typ' })], options)
       assert.equal(JSON.parse(read.stdout).structuredContent.received.file, 'notes.typ')
       assert.equal(calls.at(-1).name, 'tylina_read_file')
       await assert.rejects(run(process.execPath, [process.env.TYLINA_SDK_CLI, 'file.edit', '--args', '{}'], options), (error) => error.code === 1)
       assert.equal(calls.length, 1, 'invalid CLI writes never reach the editor')
+    } finally { await bound.dispose(); await env.dispose() }
+  })
+
+for (const mode of ['legacy', 'auto']) {
+test(`${mode}: SDK stdio exposes only the live gateway and preserves instructions, images and cancellation`,
+  { skip: !process.env.TYLINA_SDK_CLI, timeout: 25_000 }, async () => {
+    const env = await setup(), entered = deferred(), work = deferred()
+    let count = 0
+    const bound = env.host.open(async (_name, input, signal) => {
+      count++
+      if (input.file === 'wait.typ') { entered.resolve(signal); await work.promise; signal.throwIfAborted() }
+      return { structuredContent: { selection: '实际选区🙂', received: input }, content: [
+        { type: 'text', text: 'Live editor result' }, { type: 'image', mimeType: 'image/png', data: 'iVBORw0KGgo=' },
+      ] }
+    }, 'Use the connected editor and progressively load its Skills.', new AbortController().signal)
+    const transport = new StdioClientTransport({ command: process.execPath,
+      args: [process.env.TYLINA_SDK_CLI, 'mcp'], stderr: 'pipe', env: {
+        TYLINA_MCP_URL: new URL(bound.connection.path, env.origin).href, TYLINA_MCP_TOKEN: bound.connection.token,
+      } })
+    let stderr = ''
+    transport.stderr.on('data', (chunk) => { stderr += chunk })
+    const client = new Client({ name: 'tylina-stdio-acceptance', version: 'test' }, { versionNegotiation: { mode } })
+    try {
+      await client.connect(transport)
+      assert.match(client.getInstructions(), /progressively load/)
+      assert.deepEqual((await client.listTools()).tools.map((tool) => tool.name), ['tylina'])
+      const read = await client.callTool({ name: 'tylina', arguments: { command: 'editor.state' } })
+      assert.equal(read.structuredContent.selection, '实际选区🙂')
+      assert.equal(read.content[1].data, 'iVBORw0KGgo=')
+      const invalid = await client.callTool({ name: 'tylina', arguments: { command: 'file.edit', args: {} } })
+      assert.equal(invalid.isError, true)
+      assert.equal(count, 1)
+      const abort = new AbortController()
+      const pending = client.callTool({ name: 'tylina', arguments: { command: 'file.read', args: { file: 'wait.typ' } } }, { signal: abort.signal })
+      const rejected = assert.rejects(pending)
+      const signal = await entered.promise
+      const stopped = once(signal, 'abort')
+      abort.abort(new Error('Stop requested'))
+      await rejected; await stopped
+      assert.equal(signal.aborted, true)
+      work.resolve()
+      await bound.dispose()
+      const expired = await client.callTool({ name: 'tylina', arguments: { command: 'editor.state' } })
+      assert.equal(expired.isError, true)
+      assert.equal(count, 2, 'cancellation and endpoint expiry do not replay a command')
+      assert.equal(stderr.includes(bound.connection.token), false)
+      assert.equal(stderr, '')
+    } finally { work.resolve(); await client.close(); await bound.dispose(); await env.dispose() }
+  })
+}
+
+test('SDK stdio releases its HTTP connection on stdin EOF and SIGTERM',
+  { skip: !process.env.TYLINA_SDK_CLI, timeout: 25_000 }, async (t) => {
+    const env = await setup()
+    let entered = deferred()
+    const bound = env.host.open(async (_name, _input, signal) => {
+      entered.resolve(signal)
+      await once(signal, 'abort')
+      signal.throwIfAborted()
+      return { content: [] }
+    }, '', new AbortController().signal)
+    try {
+      for (const stop of ['eof', 'signal']) {
+        entered = deferred()
+        const child = spawn(process.execPath, [process.env.TYLINA_SDK_CLI, 'mcp'], {
+          stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env,
+            TYLINA_MCP_URL: new URL(bound.connection.path, env.origin).href, TYLINA_MCP_TOKEN: bound.connection.token },
+        })
+        const exited = once(child, 'exit')
+        const lines = createInterface({ input: child.stdout })
+        let stderr = ''
+        child.stderr.on('data', (chunk) => { stderr += chunk })
+        try {
+          const initialized = once(lines, 'line')
+          child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: {
+            protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'eof-test', version: '1' },
+          } }) + '\n')
+          assert.ok(JSON.parse((await initialized)[0]).result)
+          child.stdin.write(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) + '\n')
+          child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/call', params: {
+            name: 'tylina', arguments: { command: 'file.read', args: { file: 'pending.typ' } },
+          } }) + '\n')
+          const pendingSignal = await entered.promise
+          const cancelled = once(pendingSignal, 'abort', { signal: t.signal })
+          if (stop === 'eof') child.stdin.end()
+          else child.kill('SIGTERM')
+          await cancelled
+          const [code, signal] = await exited
+          assert.equal(code, 0)
+          assert.equal(signal, null)
+          assert.equal(stderr, '')
+        } finally { lines.close(); if (child.exitCode === null) child.kill('SIGKILL') }
+      }
+    } finally { await bound.dispose(); await env.dispose() }
+  })
+
+test('SDK stdio setup errors keep credentials out of output and never consume command stdin',
+  { skip: !process.env.TYLINA_SDK_CLI, timeout: 20_000 }, async () => {
+    const env = await setup()
+    const bound = env.host.open(async () => { throw new Error('Unauthenticated calls cannot reach tools') }, '', new AbortController().signal)
+    const options = { env: { ...process.env, TYLINA_MCP_URL: new URL(bound.connection.path, env.origin).href,
+      TYLINA_MCP_TOKEN: 'incorrect-test-token' }, timeout: 10_000 }
+    try {
+      for (const [args, code] of [[['mcp'], 1], [['mcp', '--stdin'], 2]]) {
+        await assert.rejects(promisify(execFile)(process.execPath, [process.env.TYLINA_SDK_CLI, ...args], options), (error) => {
+          assert.equal(error.code, code)
+          assert.equal(error.stdout, '')
+          assert.equal(error.stderr.includes(options.env.TYLINA_MCP_TOKEN), false)
+          assert.equal(error.stderr.includes(options.env.TYLINA_MCP_URL), false)
+          return true
+        })
+      }
     } finally { await bound.dispose(); await env.dispose() }
   })

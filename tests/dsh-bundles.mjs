@@ -105,6 +105,7 @@ for (const mode of modes) {
   let browser
   let page
   const errors = [], diagnostics = []
+  const expectedMissing = new Set(['output/Agent.pdf'])
   try {
     const url = await urlReady
     const origin = new URL(url).origin
@@ -193,7 +194,7 @@ for (const mode of modes) {
     const validated = await probeRequest({ name: 'tylina_validate_document' })
     assert.equal(validated.isError, false)
     assert.equal(validated.value.structuredContent.valid, true)
-    await verifyInstalledMcp({ page, frame, root, project, readMain, mode })
+    await verifyInstalledMcp({ page, frame, root, project, readMain, mode, expectedMissing })
     await verifyToolReconnect({ page, frame, root, mode, readMain, probeRequest, editorSockets, expect })
     const info = (await probeRequest({ name: 'tylina_workspace_info' })).value.structuredContent
     assert.equal(info.root, project)
@@ -299,13 +300,13 @@ for (const mode of modes) {
     await expect(page.locator('.tylina-dsh-error')).toHaveCount(0)
     assert.deepEqual(errors, [], 'all editor and detached windows must finish without uncaught browser errors')
     assert.deepEqual(diagnostics.filter((entry) => entry.kind === 'http' && !(
-      entry.path === '/tylina/project' && (entry.status === 503 || entry.status === 404 && entry.read === 'output/Agent.pdf')
+      entry.path === '/tylina/project' && (entry.status === 503 || entry.status === 404 && expectedMissing.has(entry.read))
     )), [], 'only the injected save failure and the absent export destination may return HTTP errors')
     assert.deepEqual(diagnostics.filter((entry) => entry.kind === 'console' && !entry.text.startsWith('Failed to load resource:')),
       [], 'the host console must not contain application errors')
     assert.deepEqual(diagnostics.filter((entry) => entry.kind === 'request' && entry.error !== 'net::ERR_ABORTED'),
       [], 'retired request cancellation is expected; other network failures are not')
-    console.log(`PASS ${mode}: packed install, actual Agent loop and projects, compile/format, disk saves, external Undo, PDF export, image receipts, context replacement, host Agent navigation, hide/reopen, reload and disposal`)
+    console.log(`PASS ${mode}: packed install, actual Agent loop and projects, compile/format, disk saves, external Undo, PDF/PNG/SVG export, image receipts, context replacement, host Agent navigation, hide/reopen, reload and disposal`)
   } catch (error) {
     if (page) { const url = new URL(page.url()); console.error('Failed page:', url.origin + url.pathname); console.error((await page.locator('body').innerText().catch(() => '')).slice(0, 1800)) }
     await page?.screenshot({ path: join(root, `.benchmarks/dsh-${mode}-failure.png`) }).catch(() => undefined)

@@ -171,6 +171,13 @@ checks one shared `tylina` command tool against the released Harness registry an
 connection over real sockets, including session isolation, cancellation and teardown. These boundary
 tests do not invoke a model or prove the installed Agent loop.
 
+With the matching candidate SDK installed, run
+`TYLINA_TEST_SIDECAR=/absolute/path/to/tylina-tinymist pnpm test:runtime` for native cancellation.
+This uses the real release sidecar over an authenticated WebSocket: cancelling a command stops that
+engine's pending work, preserves the independent preview engine, and allows the next command to start
+fresh. It also checks completed signals and connection disposal. Native LSP in-flight cancellation
+remains separate work; this test does not claim to cover it.
+
 `node --test tests/dsh-workspaces.mjs` checks provider mapping and authenticated HTTP project access
 against the released Harness filesystem. The installed acceptance suite checks actual disk publication
 and external edits through the compiled SDK.

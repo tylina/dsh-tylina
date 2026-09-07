@@ -13,7 +13,7 @@ export function createRuntimeSocket(options: {
   let disposed = false
   server.on('connection', (socket) => {
     const runtime = createNativeEmbeddingRuntime(options)
-    const pending = new Set<number>()
+    const pending = new Map<number, AbortController>()
     let alive = true
     const send = (message: unknown) => {
       if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message))
@@ -24,7 +24,11 @@ export function createRuntimeSocket(options: {
       if (!alive) { socket.terminate(); return }
       alive = false; socket.ping()
     }, 30_000)
-    const close = () => { clearInterval(heartbeat); unsubscribe(); runtime.dispose() }
+    const close = () => {
+      clearInterval(heartbeat); unsubscribe()
+      for (const controller of pending.values()) controller.abort(new Error('The runtime connection closed'))
+      pending.clear(); runtime.dispose()
+    }
     socket.on('close', close)
     socket.on('error', () => { close(); socket.terminate() })
     socket.on('message', (data, binary) => {
@@ -34,6 +38,10 @@ export function createRuntimeSocket(options: {
         if (binary) throw new Error('Text messages required')
         const message = JSON.parse(data.toString())
         id = message.id; payload = message.payload
+        if (message.kind === 'cancel' && Number.isSafeInteger(id) && id > 0) {
+          pending.get(id)?.abort(new DOMException('The runtime request was cancelled', 'AbortError'))
+          return
+        }
         if (message.kind !== 'request' || !Number.isSafeInteger(id) || id < 1 || pending.has(id) || pending.size >= 64) {
           throw new Error('Invalid request')
         }
@@ -41,11 +49,16 @@ export function createRuntimeSocket(options: {
         if (payload.channel === 'language' && (!['request', 'notification'].includes(payload.type) || typeof payload.payload?.method !== 'string')) {
           throw new Error('Invalid language request')
         }
-        pending.add(id)
+        pending.set(id, new AbortController())
       } catch { socket.close(1008, 'Invalid runtime request'); return }
-      void runtime.request(payload).then(
+      const signal = pending.get(id)!.signal
+      void runtime.request(payload, signal).then((result) => {
+        signal.throwIfAborted()
+        return result
+      }).then(
         (result) => send({ kind: 'response', id, result }),
-        (error: unknown) => send({ kind: 'response', id, error: error instanceof Error ? error.message : String(error) })
+        (error: unknown) => send({ kind: 'response', id, error: error instanceof Error ? error.message : String(error),
+          cancelled: signal.aborted || (error instanceof Error && error.name === 'AbortError') })
       ).catch(() => socket.terminate()).finally(() => pending.delete(id))
     })
   })

@@ -15,6 +15,7 @@
     "build:native": "node scripts/build.mjs native",
     "pack:bundles": "node pack.mjs",
     "test": "node --test tests/dsh-assets.mjs tests/dsh-tools.mjs tests/dsh-skills.mjs tests/dsh-mcp.mjs tests/dsh-editor-connection.mjs tests/dsh-workspaces.mjs tests/dsh-workspace-views.mjs",
+    "test:runtime": "node --test tests/dsh-runtime-cancellation.mjs",
     "test:installed": "node tests/dsh-bundles.mjs",
     "verify:packages": "node scripts/verify-packages.mjs"
   },

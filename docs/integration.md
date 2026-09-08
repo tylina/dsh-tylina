@@ -61,7 +61,7 @@ Each native runtime manifest restricts installation to its actual OS and archite
 Install **one** variant into an existing Web profile:
 
 ```sh
-dsh plugin --profile web add /absolute/path/dsh-tylina-0.4.5.tgz
+dsh plugin --profile web add /absolute/path/dsh-tylina-0.4.8.tgz
 dsh --profile web
 ```
 
@@ -206,7 +206,7 @@ implementation shared by the two bundles. Both publish only compiled output and 
 with repository metadata, a public access setting and no runtime workspace dependencies.
 The source workspace shares one candidate version. Run `pnpm release:version <version>` to update
 all four manifests together. Build and packaging reject mismatched candidate versions. Publication
-can be staged: 0.4.5 ships the WASM bundle first; the native bundle remains unpublished until its
+can be staged: 0.4.8 ships the WASM bundle first; the native bundle remains unpublished until its
 matching cross-platform runtimes are ready. The published native version is still 0.4.4. Update
 the native runtime dependencies before publishing that candidate. SDK, assets and platform binaries
 keep independent versions, and release notes must identify which bundles are actually available.

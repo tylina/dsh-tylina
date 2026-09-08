@@ -17,7 +17,7 @@ Edit typeset Typst documents inside DeepSeek Harness. Share a workspace with you
 Already using DeepSeek Harness? Install the browser WASM edition:
 
 ```sh
-dsh plugin --profile web add dsh-tylina
+dsh plugin --profile web add dsh-tylina@0.4.6
 dsh web
 ```
 
@@ -26,6 +26,10 @@ Update:
 ```sh
 dsh plugin --profile web update dsh-tylina@latest
 ```
+
+For a newly published release, use `dsh plugin --profile web update dsh-tylina@0.4.6`.
+[pnpm 11](https://github.com/pnpm/pnpm.io/blob/main/blog/releases/11.0.md) may defer `latest` updates for one day.
+
 
 Click **Tylina** to open the current conversation’s workspace automatically. Double-click a `.typ` file,
 or ask your agent to set the main document. Switch conversations and the editor follows; pin it to stay in one workspace.

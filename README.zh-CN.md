@@ -17,7 +17,7 @@
 已有 DeepSeek Harness？安装浏览器 WASM 版：
 
 ```sh
-dsh plugin --profile web add dsh-tylina
+dsh plugin --profile web add dsh-tylina@0.4.6
 dsh web
 ```
 
@@ -26,6 +26,10 @@ dsh web
 ```sh
 dsh plugin --profile web update dsh-tylina@latest
 ```
+
+刚发布的版本可用 `dsh plugin --profile web update dsh-tylina@0.4.6` 明确升级。
+[pnpm 11](https://github.com/pnpm/pnpm.io/blob/main/blog/releases/11.0.md) 默认可能延后一天采用 `latest` 新版本。
+
 
 点击 **Tylina**，自动打开当前会话的工作区。双击 `.typ` 文件，或让 Agent 设置主文件。
 切换会话时编辑器自动跟随；点击固定按钮可以留在原工作区。

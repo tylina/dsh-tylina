@@ -8,6 +8,7 @@ import { after, test } from 'node:test'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const require = createRequire(join(root, 'plugin/package.json'))
+await mkdir(join(root, '.benchmarks'), { recursive: true })
 const temporary = await mkdtemp(join(root, '.benchmarks/workspace-views-'))
 after(() => rm(temporary, { recursive: true, force: true }))
 await require('esbuild').build({ stdin: { contents: `export { createWorkspaceViews } from './src/workspace-views';

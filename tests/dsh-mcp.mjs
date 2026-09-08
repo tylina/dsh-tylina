@@ -3,7 +3,7 @@ import { promisify } from 'node:util'
 import { commandInput } from './command-input.mjs'
 import assert from 'node:assert/strict'
 import { once } from 'node:events'
-import { mkdir, mkdtemp, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { createServer, request as httpRequest } from 'node:http'
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
@@ -138,8 +138,15 @@ test('SDK CLI uses the same authenticated command protocol and preserves failure
       const read = await run(process.execPath, [process.env.TYLINA_SDK_CLI, 'file.read', '--args', JSON.stringify({ file: 'notes.typ' })], options)
       assert.equal(JSON.parse(read.stdout).structuredContent.received.file, 'notes.typ')
       assert.equal(calls.at(-1).name, 'tylina_read_file')
+      const connectionFile = join(temporary, 'copied-mcp.json')
+      await writeFile(connectionFile, JSON.stringify({ mcpServers: { tylina: { type: 'http',
+        url: options.env.TYLINA_MCP_URL, headers: { Authorization: `Bearer ${bound.connection.token}` } } } }), { mode: 0o600 })
+      const fileEnv = { ...process.env }; delete fileEnv.TYLINA_MCP_URL; delete fileEnv.TYLINA_MCP_TOKEN
+      const fromFile = await run(process.execPath, [process.env.TYLINA_SDK_CLI, 'file.read', '--connection', connectionFile,
+        '--args', JSON.stringify({ file: 'copied.typ' })], { ...options, env: fileEnv })
+      assert.equal(JSON.parse(fromFile.stdout).structuredContent.received.file, 'copied.typ')
       await assert.rejects(run(process.execPath, [process.env.TYLINA_SDK_CLI, 'file.edit', '--args', '{}'], options), (error) => error.code === 1)
-      assert.equal(calls.length, 1, 'invalid CLI writes never reach the editor')
+      assert.equal(calls.length, 2, 'invalid CLI writes never reach the editor')
     } finally { await bound.dispose(); await env.dispose() }
   })
 
@@ -155,8 +162,11 @@ test(`${mode}: SDK stdio exposes only the live gateway and preserves instruction
         { type: 'text', text: 'Live editor result' }, { type: 'image', mimeType: 'image/png', data: 'iVBORw0KGgo=' },
       ] }
     }, 'Use the connected editor and progressively load its Skills.', new AbortController().signal)
+    const connectionFile = join(temporary, `bridge-${mode}.json`)
+    await writeFile(connectionFile, JSON.stringify({ mcpServers: { tylina: { type: 'http',
+      url: new URL(bound.connection.path, env.origin).href, headers: { Authorization: `Bearer ${bound.connection.token}` } } } }), { mode: 0o600 })
     const transport = new StdioClientTransport({ command: process.execPath,
-      args: [process.env.TYLINA_SDK_CLI, 'mcp'], stderr: 'pipe', env: {
+      args: [process.env.TYLINA_SDK_CLI, 'mcp', ...mode === 'auto' ? ['--connection', connectionFile] : []], stderr: 'pipe', env: mode === 'auto' ? {} : {
         TYLINA_MCP_URL: new URL(bound.connection.path, env.origin).href, TYLINA_MCP_TOKEN: bound.connection.token,
       } })
     let stderr = ''
@@ -213,7 +223,8 @@ test('SDK stdio releases its HTTP connection on stdin EOF and SIGTERM',
         let stderr = ''
         child.stderr.on('data', (chunk) => { stderr += chunk })
         try {
-          const initialized = once(lines, 'line')
+          const initialized = Promise.race([once(lines, 'line', { signal: t.signal }),
+            exited.then(() => { throw new Error('SDK stdio exited before initialization') })])
           child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: {
             protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'eof-test', version: '1' },
           } }) + '\n')

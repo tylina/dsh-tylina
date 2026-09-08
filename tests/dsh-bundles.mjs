@@ -15,6 +15,7 @@ import { verifySessionFollowing } from './dsh-session-follow.mjs'
 import { verifyInstalledMcp } from './dsh-mcp-installed.mjs'
 import { verifyWindowRecovery } from './dsh-window-recovery.mjs'
 import { verifyToolReconnect } from './dsh-tool-reconnect.mjs'
+import { verifyLiveModel } from './dsh-live-model.mjs'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const require = createRequire(join(root, 'package.json'))
@@ -36,6 +37,7 @@ for (const mode of modes) {
   const version = JSON.parse(await readFile(join(root, `bundle-${mode}/package.json`), 'utf8')).version
   const home = await mkdtemp(join(root, `.benchmarks/dsh-${mode}-`))
   const env = { ...process.env, DSH_HOME: home }
+  if (env.TYLINA_DSH_LIVE_KEY) env.DEEPSEEK_API_KEY = env.TYLINA_DSH_LIVE_KEY
   const project = join(home, 'project')
   await mkdir(project)
   const source = '#let title="Tylina in dsh"\r\n= #title\r\n\r\nHello 世界'
@@ -121,7 +123,9 @@ for (const mode of modes) {
     browser = await chromium.launch({ headless: Boolean(process.env.CI) })
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, permissions: ['clipboard-read', 'clipboard-write'] })
     context.on('page', (owner) => {
-      owner.on('pageerror', (error) => { errors.push(error.message) })
+      owner.on('pageerror', (error) => {
+        errors.push({ message: error.message, stack: error.stack, path: new URL(owner.url()).pathname })
+      })
       owner.on('console', (message) => {
         if (message.type() === 'error' && diagnostics.length < 256) diagnostics.push({ kind: 'console', text: message.text() })
       })
@@ -135,7 +139,14 @@ for (const mode of modes) {
         diagnostics.push({ kind: 'http', path: url.pathname, status: response.status(), read: url.searchParams.get('read') })
       })
     })
+    await context.exposeBinding('__tylinaAcceptanceError', ({ frame }, error) => {
+      diagnostics.push({ kind: 'window-error', path: new URL(frame.url()).pathname, ...error })
+    })
     await context.addInitScript(() => {
+      window.addEventListener('error', (event) => {
+        void window.__tylinaAcceptanceError({ message: event.message, stack: event.error?.stack,
+          source: event.filename, line: event.lineno, column: event.colno, time: Date.now() })
+      })
       if (location.protocol === 'http:' || location.protocol === 'https:') localStorage.setItem('tylina.locale', 'en')
     })
     page = await context.newPage()
@@ -151,7 +162,10 @@ for (const mode of modes) {
     await page.goto(url)
     const continueButton = page.getByRole('button', { name: /^(继续|Continue)$/u })
     await continueButton.click()
-    await page.getByRole('button', { name: /^(稍后配置|Set up later|Configure later)$/u }).click()
+    const initialConfigure = page.getByRole('button', { name: /^(稍后配置|Set up later|Configure later)$/u })
+    await expect.poll(async () => await initialConfigure.isVisible() ||
+      await page.getByRole('button', { name: /^(打开 Tylina|Open Tylina)$/u }).isVisible()).toBe(true)
+    if (await initialConfigure.isVisible()) await initialConfigure.click()
     await page.evaluate(async () => {
       const response = await fetch('/tylina-acceptance', { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'bootstrap' }) })
@@ -307,6 +321,7 @@ for (const mode of modes) {
       const pdf = await readFile(join(project, 'output/Agent.pdf'))
       assert.equal(pdf.subarray(0, 5).toString(), '%PDF-')
     }
+    if (env.TYLINA_DSH_LIVE_KEY) await verifyLiveModel({ page, frame, project, readMain, probeRequest, expect, errors, expectedMissing })
     page = await verifyWindowRecovery({ page, context, root, mode, sessionId, readMain, expect })
     await expect(page.locator('.tylina-dsh-error')).toHaveCount(0)
     assert.deepEqual(errors, [], 'all editor and detached windows must finish without uncaught browser errors')
@@ -329,7 +344,9 @@ for (const mode of modes) {
     const killed = setTimeout(() => server.kill('SIGKILL'), 5000)
     if (server.exitCode === null) await once(server, 'exit')
     clearTimeout(killed)
-    await writeFile(join(home, 'server.log'), output.replace(/\?token=\S+/gu, '?token=[redacted]'))
-    await writeFile(join(home, 'browser-diagnostics.json'), JSON.stringify({ errors, diagnostics }, null, 2) + '\n')
+    await writeFile(join(home, 'server.log'), output.replace(/\?token=\S+/gu, '?token=[redacted]')
+      .replaceAll(env.TYLINA_DSH_LIVE_KEY || '__no_live_credential__', '[redacted]'))
+    await writeFile(join(home, 'browser-diagnostics.json'), (JSON.stringify({ errors, diagnostics }, null, 2) + '\n')
+      .replaceAll(env.TYLINA_DSH_LIVE_KEY || '__no_live_credential__', '[redacted]'))
   }
 }

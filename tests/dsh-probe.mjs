@@ -6,6 +6,7 @@ export const inject = ['webServer', 'connection', 'sessionController', 'workspac
 export function apply(ctx) {
   let sequence = 0
   const model = createModelFixture(ctx)
+  const liveStarts = new Map()
   const seed = async (sessionId, title) => {
     model.begin(sessionId, 'Initialize document conversation', { seed: true })
     await ctx.sessionController.selectModel({ sessionId, provider: 'tylina-acceptance', model: 'document-fixture' })
@@ -35,6 +36,22 @@ export function apply(ctx) {
       const result = await ctx.sessionController.resolveAgent(input.sessionId)
       if ('error' in result) throw new Error(result.error.message)
       const { agent } = result
+      if (input.action === 'live-turn') {
+        if (!process.env.TYLINA_DSH_LIVE_KEY) throw new Error('Live model acceptance is not enabled')
+        liveStarts.set(input.sessionId, agent.session.snapshotEvents().length)
+        await ctx.sessionController.selectModel({ sessionId: input.sessionId, provider: 'deepseek-official', model: 'deepseek-v4-flash' })
+        await ctx.sessionController.prompt({ requestId: `tylina-live-${++sequence}`, sessionId: input.sessionId,
+          mode: 'queue', content: [{ type: 'text', text: input.prompt }] }, new AbortController().signal)
+      }
+      if (input.action === 'live-turn' || input.action === 'live-state') {
+        const events = agent.session.snapshotEvents().slice(liveStarts.get(input.sessionId) ?? 0)
+        const commands = events.filter((event) => event.type === 'tool/call' && event.data.name === 'tylina')
+          .map((event) => { try { return JSON.parse(event.data.arguments).command } catch { return null } })
+        const value = { status: agent.status, commands,
+          replied: events.some((event) => event.type === 'assistant/message'),
+          errors: events.filter((event) => event.type.endsWith('/error')).map((event) => event.type) }
+        response.writeHead(200, { 'Content-Type': 'application/json' }); response.end(JSON.stringify(value)); return
+      }
       if (input.action === 'create-session') {
         await ctx.sessionController.rename({ sessionId: input.sessionId, title: 'Conversation A' })
         const created = await ctx.sessionController.create({ cwd: input.cwd })

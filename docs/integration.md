@@ -153,11 +153,18 @@ the actual Agent loop through reading, editing, validation, PDF export to the pr
 The next model request must receive each real tool result. The suite replaces the actual Session message surface
 as compaction does and repeats the turn, verifying that authoring instructions remain present exactly once.
 The model fixture and authenticated test probe are not distributed. No model API key or live provider inference
-is involved; the test controls model output and the summary text, while Harness owns its actual loop and history.
+is involved by default; the test controls model output and the summary text, while Harness owns its actual loop and history.
 It also exercises the dock beside an editable chat, pointer/keyboard resizing, narrow-screen focus isolation,
 blocked popups, rejected project saves with unsaved text retained, separate-window edits and return to the dock.
 Switching between two real conversations transfers tools and restores each project's main file without changing
 the other project's bytes. A completed-history fixture makes those conversations visible in Harness navigation.
+To additionally exercise the real DeepSeek provider, set `TYLINA_DSH_LIVE_KEY` in the test process environment.
+The suite selects `deepseek-official` / `deepseek-v4-flash` in the isolated Harness session and asks the model
+to read the human's Source selection, edit only that range, validate, save and export PDF, PNG and SVG.
+It independently compares the complete saved source and checks exported file bytes. The model must discover
+and use the single `tylina` tool; its prompt does not disclose the selected text. This performs paid API calls.
+The supplied credential is redacted from saved diagnostics; no request-body trace or HAR is recorded.
+
 Screenshots and isolated profile logs live under `.benchmarks`. Set `TYLINA_DSH_OFFLINE=1` only when all exact
 dependencies are already in the local pnpm store; ordinary acceptance allows dependency downloads.
 For unpublished candidates, `TYLINA_DSH_WEB_ASSETS` and `TYLINA_DSH_NATIVE_RUNTIME` select local package

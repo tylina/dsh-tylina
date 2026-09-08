@@ -195,7 +195,7 @@ for (const mode of modes) {
     assert.equal(validated.isError, false)
     assert.equal(validated.value.structuredContent.valid, true)
     await verifyInstalledMcp({ page, frame, root, project, readMain, mode, expectedMissing })
-    await verifyToolReconnect({ page, frame, root, mode, readMain, probeRequest, editorSockets, expect })
+    await verifyToolReconnect({ page, frame, root, mode, readMain, probeRequest, editorSockets, expect, expectedMissing })
     const info = (await probeRequest({ name: 'tylina_workspace_info' })).value.structuredContent
     assert.equal(info.root, project)
     await access(join(info.skillsRoot, 'typst-slides/scripts/rotate_images.py'))
@@ -301,7 +301,7 @@ for (const mode of modes) {
     assert.deepEqual(errors, [], 'all editor and detached windows must finish without uncaught browser errors')
     assert.deepEqual(diagnostics.filter((entry) => entry.kind === 'http' && !(
       entry.path === '/tylina/project' && (entry.status === 503 || entry.status === 404 && expectedMissing.has(entry.read))
-    )), [], 'only the injected save failure and the absent export destination may return HTTP errors')
+    )), [], 'only the injected save failure and explicitly checked missing files may return HTTP errors')
     assert.deepEqual(diagnostics.filter((entry) => entry.kind === 'console' && !entry.text.startsWith('Failed to load resource:')),
       [], 'the host console must not contain application errors')
     assert.deepEqual(diagnostics.filter((entry) => entry.kind === 'request' && entry.error !== 'net::ERR_ABORTED'),

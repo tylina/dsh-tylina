@@ -183,7 +183,10 @@ for (const mode of modes) {
     await frame.getByTitle('Plugin.typ', { exact: true }).dblclick()
     await expect(frame.locator('.typst-doc')).toBeVisible({ timeout: 30_000 })
     await expect(frame.locator('.web-document-title')).toHaveText('project')
+    const drawerClosed = await frame.getByTestId('tylina-root').getAttribute('data-workspace-sidebar-collapsed') === 'true'
+    if (drawerClosed) await frame.getByRole('button', { name: 'Sidebar', exact: true }).click()
     await expect(frame.locator('.workspaceCurrentTitle')).toHaveText('project')
+    if (drawerClosed) await frame.getByRole('button', { name: 'Sidebar', exact: true }).click()
     const readMain = () => readFile(join(project, 'Plugin.typ'), 'utf8')
     const probeRequest = (input) => page.evaluate(async (input) => {
       const response = await fetch('/tylina-acceptance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) })

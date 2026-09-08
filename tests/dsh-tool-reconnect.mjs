@@ -8,6 +8,14 @@ export async function verifyToolReconnect(options) {
 
 async function verifyReconnectPhase({ page, frame, root, mode, readMain, probeRequest, editorSockets, expect, expectedMissing }, committed) {
   const original = await readMain()
+  const toggleSplit = async () => {
+    const button = frame.getByRole('button', { name: 'Split', exact: true })
+    if (await button.isVisible()) await button.click()
+    else {
+      await frame.getByRole('button', { name: 'More', exact: true }).click()
+      await frame.getByRole('menuitemcheckbox', { name: 'Split View', exact: true }).click()
+    }
+  }
   let releaseSave, saves = 0, reads = 0
   const cancelledFile = 'cancelled-tool.typ'
   expectedMissing.add(cancelledFile)
@@ -27,7 +35,7 @@ async function verifyReconnectPhase({ page, frame, root, mode, readMain, probeRe
   let result
   await page.route('**/tylina/project?**', holdSave)
   try {
-    await frame.getByRole('button', { name: 'Split', exact: true }).click()
+    await toggleSplit()
     const source = frame.getByTestId('monaco-source-editor')
     await source.click({ position: { x: 150, y: 12 } })
     await page.keyboard.press(process.platform === 'darwin' ? 'Meta+ArrowDown' : 'Control+End')
@@ -82,6 +90,6 @@ async function verifyReconnectPhase({ page, frame, root, mode, readMain, probeRe
     file: 'Plugin.typ', contents: original, expectedSha256: current.sha256
   } })).isError, false)
   await expect.poll(readMain).toBe(original)
-  await frame.getByRole('button', { name: 'Split', exact: true }).click()
+  await toggleSplit()
   console.log(`PASS ${mode}: reconnect ${committed ? 'after' : 'before'} commit preserves typing and never replays the cancelled write`)
 }

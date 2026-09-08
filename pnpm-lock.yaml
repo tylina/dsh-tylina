@@ -22,8 +22,8 @@ importers:
         specifier: 7.0.6
         version: 7.0.6
       tylina-web-assets:
-        specifier: 0.4.4
-        version: 0.4.4
+        specifier: 0.4.5
+        version: 0.4.5
 
   bundle-native:
     dependencies:
@@ -43,8 +43,8 @@ importers:
         specifier: ^0.18.0
         version: 0.18.0(dafc22554809c366964d5771706df681)
       tylina-web-assets:
-        specifier: 0.4.4
-        version: 0.4.4
+        specifier: 0.4.5
+        version: 0.4.5
       ws:
         specifier: ^8.18.3
         version: 8.21.3
@@ -96,8 +96,8 @@ importers:
         specifier: ^0.18.0
         version: 0.18.0(dafc22554809c366964d5771706df681)
       tylina-web-assets:
-        specifier: 0.4.4
-        version: 0.4.4
+        specifier: 0.4.5
+        version: 0.4.5
       ws:
         specifier: ^8.18.3
         version: 8.21.3
@@ -215,8 +215,8 @@ importers:
         specifier: 0.4.3
         version: 0.4.3
       tylina-web-assets:
-        specifier: 0.4.4
-        version: 0.4.4
+        specifier: 0.4.5
+        version: 0.4.5
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -2157,8 +2157,8 @@ packages:
     resolution: {integrity: sha512-vtzGuzb9/+by3RuElSAgl2EI3IdiLmk7L1QYpQWdT2cBx/dIGZyXepmWwQZGOH2AQFTz2dfuJvnOQubqvv5Z4Q==}
     hasBin: true
 
-  tylina-web-assets@0.4.4:
-    resolution: {integrity: sha512-h+GTRGQcsMsBTmHFJpdumZJnWBj0RcYH5EijzgYWsklueeShE5LX2VhA5GG70iCHUx2XhnRCQVuBYMlTtNdffg==}
+  tylina-web-assets@0.4.5:
+    resolution: {integrity: sha512-JUjroUCZSMw2uEeWZJqn+8cSqodZHe+7jz7P6cXRyEL0ggpVYbP+EjnghVeryl65kA4SVy7h2qhy6lbFQwBc8A==}
 
   typescript@6.0.3:
     resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
@@ -4518,7 +4518,7 @@ snapshots:
       cross-spawn: 7.0.6
       zod: 4.4.3
 
-  tylina-web-assets@0.4.4:
+  tylina-web-assets@0.4.5:
     dependencies:
       tylina-font-assets-1: 0.4.1
       tylina-font-assets-10: 0.4.1

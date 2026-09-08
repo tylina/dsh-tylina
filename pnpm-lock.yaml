@@ -22,8 +22,8 @@ importers:
         specifier: 7.0.6
         version: 7.0.6
       tylina-web-assets:
-        specifier: 0.4.6
-        version: 0.4.6
+        specifier: 0.4.7
+        version: 0.4.7
 
   bundle-native:
     dependencies:
@@ -43,8 +43,8 @@ importers:
         specifier: ^0.18.0
         version: 0.18.0(dafc22554809c366964d5771706df681)
       tylina-web-assets:
-        specifier: 0.4.6
-        version: 0.4.6
+        specifier: 0.4.7
+        version: 0.4.7
       ws:
         specifier: ^8.18.3
         version: 8.21.3
@@ -96,8 +96,8 @@ importers:
         specifier: ^0.18.0
         version: 0.18.0(dafc22554809c366964d5771706df681)
       tylina-web-assets:
-        specifier: 0.4.6
-        version: 0.4.6
+        specifier: 0.4.7
+        version: 0.4.7
       ws:
         specifier: ^8.18.3
         version: 8.21.3
@@ -2159,6 +2159,9 @@ packages:
 
   tylina-web-assets@0.4.6:
     resolution: {integrity: sha512-o5VEjCDA1jtYebT6/VdUsuF2v6fyUn6rQUH8sw/u9e8DapGwdIg9DXIcU8MazKvliWSO11itXFM4mXVVI0HREg==}
+
+  tylina-web-assets@0.4.7:
+    resolution: {integrity: sha512-E7aq2kl4VRxKDIdTTHdo9u13F3hAt/7635sGtk/4T7hBj5demR+Zm2pAa4T9BxZDL96f4n1ZH2V8fPN0T3gWWg==}
 
   typescript@6.0.3:
     resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
@@ -4519,6 +4522,21 @@ snapshots:
       zod: 4.4.3
 
   tylina-web-assets@0.4.6:
+    dependencies:
+      tylina-font-assets-1: 0.4.1
+      tylina-font-assets-10: 0.4.1
+      tylina-font-assets-11: 0.4.1
+      tylina-font-assets-12: 0.4.1
+      tylina-font-assets-2: 0.4.1
+      tylina-font-assets-3: 0.4.1
+      tylina-font-assets-4: 0.4.1
+      tylina-font-assets-5: 0.4.1
+      tylina-font-assets-6: 0.4.1
+      tylina-font-assets-7: 0.4.1
+      tylina-font-assets-8: 0.4.1
+      tylina-font-assets-9: 0.4.1
+
+  tylina-web-assets@0.4.7:
     dependencies:
       tylina-font-assets-1: 0.4.1
       tylina-font-assets-10: 0.4.1

@@ -21,21 +21,21 @@ minimumReleaseAgeExclude:
   - '@playwright/test@1.63.0'
   - playwright-core@1.63.0
   - playwright@1.63.0
-  - tylina-font-assets-10@0.4.0
-  - tylina-font-assets-11@0.4.0
-  - tylina-font-assets-12@0.4.0
-  - tylina-font-assets-1@0.4.0
-  - tylina-font-assets-2@0.4.0
-  - tylina-font-assets-3@0.4.0
-  - tylina-font-assets-4@0.4.0
-  - tylina-font-assets-5@0.4.0
-  - tylina-font-assets-6@0.4.0
-  - tylina-font-assets-7@0.4.0
-  - tylina-font-assets-8@0.4.0
-  - tylina-font-assets-9@0.4.0
+  - tylina-font-assets-10@0.4.0 || 0.4.1
+  - tylina-font-assets-11@0.4.0 || 0.4.1
+  - tylina-font-assets-12@0.4.0 || 0.4.1
+  - tylina-font-assets-1@0.4.0 || 0.4.1
+  - tylina-font-assets-2@0.4.0 || 0.4.1
+  - tylina-font-assets-3@0.4.0 || 0.4.1
+  - tylina-font-assets-4@0.4.0 || 0.4.1
+  - tylina-font-assets-5@0.4.0 || 0.4.1
+  - tylina-font-assets-6@0.4.0 || 0.4.1
+  - tylina-font-assets-7@0.4.0 || 0.4.1
+  - tylina-font-assets-8@0.4.0 || 0.4.1
+  - tylina-font-assets-9@0.4.0 || 0.4.1
   - tylina-native-darwin-arm64@0.4.0 || 0.4.1
-  - tylina-sdk@0.4.0 || 0.4.1 || 0.4.2
-  - tylina-web-assets@0.4.0 || 0.4.1 || 0.4.2 || 0.4.3
+  - tylina-sdk@0.4.0 || 0.4.1 || 0.4.2 || 0.4.3
+  - tylina-web-assets@0.4.0 || 0.4.1 || 0.4.2 || 0.4.3 || 0.4.4
   - tylina-native-linux-arm64@0.4.1
   - tylina-native-linux-x64@0.4.1
   - tylina-native-win32-arm64@0.4.1

@@ -1,6 +1,6 @@
 {
   "name": "dsh-tylina-native",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "type": "module",
   "license": "UNLICENSED",
   "description": "Tylina native runtime bundle for DeepSeek Harness",
@@ -32,7 +32,7 @@
     "@deepseek-ai/dsh-llm": "0.1.2-rc.1",
     "@deepseek-ai/dsh-skill-filesystem": "0.1.2-rc.1",
     "ws": "^8.18.3",
-    "tylina-web-assets": "0.4.3"
+    "tylina-web-assets": "0.4.4"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

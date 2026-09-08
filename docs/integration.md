@@ -160,6 +160,11 @@ Switching between two real conversations transfers tools and restores each proje
 the other project's bytes. A completed-history fixture makes those conversations visible in Harness navigation.
 Screenshots and isolated profile logs live under `.benchmarks`. Set `TYLINA_DSH_OFFLINE=1` only when all exact
 dependencies are already in the local pnpm store; ordinary acceptance allows dependency downloads.
+For unpublished candidates, `TYLINA_DSH_WEB_ASSETS` and `TYLINA_DSH_NATIVE_RUNTIME` select local package
+directories. `TYLINA_DSH_PACKAGE_OVERRIDES` accepts a JSON object mapping additional npm package names
+to local package directories or tarballs, including matching font packages. These overrides are installed
+in the isolated profile before the first `dsh plugin add`; acceptance must not rely on installing an older
+published dependency first. The distributed bundle manifests still use exact registry versions.
 The installed suite also copies the actual MCP configuration and uses the official SDK to verify scoped
 workspace reads, writes, compilation, images, Skills, templates and revocation. The transport suite is
 `node --test tests/dsh-mcp.mjs`; it checks both protocol eras, authentication,

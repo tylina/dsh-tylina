@@ -42,6 +42,26 @@ for (const mode of modes) {
   await writeFile(join(project, 'Plugin.typ'), source)
   const archive = join(root, `release/${packageName}-${version}.tgz`)
   await access(archive)
+  const candidates = {
+    ...JSON.parse(process.env.TYLINA_DSH_PACKAGE_OVERRIDES ?? '{}'),
+    ...(process.env.TYLINA_DSH_WEB_ASSETS && { 'tylina-web-assets': process.env.TYLINA_DSH_WEB_ASSETS }),
+    ...(mode === 'native' && process.env.TYLINA_DSH_NATIVE_RUNTIME && {
+      [`tylina-native-${process.platform}-${process.arch}`]: process.env.TYLINA_DSH_NATIVE_RUNTIME
+    })
+  }
+  if (Object.keys(candidates).length) {
+    // DSH preserves existing profile files. Resolve candidates from the first install,
+    // including unpublished resource dependencies, rather than replacing an old install.
+    const directory = join(home, 'profiles/tylina')
+    await mkdir(directory, { recursive: true })
+    for (const path of Object.values(candidates)) {
+      assert.equal(typeof path, 'string')
+      await access(path)
+    }
+    await writeFile(join(directory, 'pnpm-workspace.yaml'),
+      'packages:\n  - .\nnodeLinker: hoisted\nautoInstallPeers: false\noverrides:\n' +
+      Object.entries(candidates).map(([name, path]) => `  ${JSON.stringify(name)}: ${JSON.stringify(`file:${path}`)}\n`).join(''))
+  }
   await run('dsh', ['plugin', '--profile', 'tylina', 'add', archive, ...installOptions], { env, maxBuffer: 2 ** 20 })
   if (betterSidebar) {
     const configuration = join(home, 'profiles/tylina/pnpm-workspace.yaml')
@@ -64,18 +84,6 @@ for (const mode of modes) {
   const manifest = JSON.parse(await readFile(profile, 'utf8'))
   manifest.dsh.profile.bundles = ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app', packageName, 'tylina-acceptance-probe', ...(betterSidebar ? ['dsh-better-sidebar'] : [])]
   await writeFile(profile, JSON.stringify(manifest, null, 2) + '\n')
-  const candidates = {
-    ...(process.env.TYLINA_DSH_WEB_ASSETS && { 'tylina-web-assets': process.env.TYLINA_DSH_WEB_ASSETS }),
-    ...(mode === 'native' && process.env.TYLINA_DSH_NATIVE_RUNTIME && {
-      [`tylina-native-${process.platform}-${process.arch}`]: process.env.TYLINA_DSH_NATIVE_RUNTIME
-    })
-  }
-  if (Object.keys(candidates).length) {
-    const configuration = join(home, 'profiles/tylina/pnpm-workspace.yaml')
-    await writeFile(configuration, await readFile(configuration, 'utf8') +
-      '\noverrides:\n' + Object.entries(candidates).map(([name, path]) => `  ${name}: ${JSON.stringify(`file:${path}`)}\n`).join(''))
-    await run('pnpm', ['install', '--no-frozen-lockfile'], { cwd: join(home, 'profiles/tylina'), env, maxBuffer: 2 ** 20 })
-  }
   if (process.env.TYLINA_DSH_WEB_ASSETS) {
     assert.equal(await readFile(join(home, 'profiles/tylina/node_modules/tylina-web-assets/web/embed.html'), 'utf8'),
       await readFile(join(process.env.TYLINA_DSH_WEB_ASSETS, 'web/embed.html'), 'utf8'), 'the test must install the candidate Web assets')

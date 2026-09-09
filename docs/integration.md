@@ -112,9 +112,10 @@ and project as one session-scoped Harness runtime context. Harness snapshots it 
 changed, and restores it after compaction. Reopening or reconnecting does not enqueue connection notices or start
 inference. The current contract supersedes historical tool descriptions after an upgrade; old chat is preserved.
 Tool registration is session scoped and exclusively owned by one editor.
-Both bundles expose the complete Desktop Skill scripts in the Harness filesystem. the `runtime.prepare` command supplies
-the actual project and Skill roots and an isolated uv environment. It prefers installed system uv; when absent,
-an explicit tool request starts managed background installation using the shared Desktop installer.
+Both bundles expose the complete Desktop Skill scripts in the Harness filesystem. `workspace.info` supplies
+the project and Skill roots. Use the Harness file/Skill tools to read them and its process tools to run scripts.
+Before a document tool executes, the editor receives pending filesystem changes, so validation and export
+observe the source just edited by the Harness. A refresh conflict is reported rather than validating old text.
 
 App routes and socket upgrades reuse Harness Connection authentication and Host/Origin checks.
 The plugin adds no unauthenticated process endpoint, arbitrary network proxy or application launcher.
@@ -125,8 +126,9 @@ Use the normal Harness authenticated URL to log in before opening `/tylina/` dir
 The plug icon in the document header opens **Connect an MCP client**. Copy the configuration into a
 Streamable HTTP MCP client to use the same live document commands and authoring instructions.
 Harness already receives these tools directly; this connection is for another client and does not duplicate
-the Harness Agent's tool catalog. Tools read the live editor, retain version-checked file writes and Undo,
-and use the same compiler, templates and packaged Skills as the ordinary Harness tools.
+the Harness Agent's tool catalog. Tylina provides live selection, compilation, templates and export.
+File edits use the external client's own harness tools and arrive through the editor's external-change handling,
+including Undo. Skill resources are ordinary readable paths, not additional MCP tools.
 
 The exported configuration uses the common `mcpServers` wrapper, with an HTTP `url` and an `Authorization`
 header. Adapt the outer configuration key if your client uses another format (for example VS Code's `servers`).

@@ -3,26 +3,25 @@ import { createTylinaMcpSessionInstructions } from 'tylina-sdk/tools'
 import { loadTylinaMcpCoreSkillInstructions } from 'tylina-sdk/tools'
 import { registerTylinaEditorTools, type EditorToolCaller } from './tools'
 import type { createHarnessWorkspaces } from './workspaces'
-import type { TylinaToolRuntime } from 'tylina-sdk/node'
-import { withHarnessToolRuntime } from './tool-runtime'
+import { withWorkspaceToolContext } from './workspace-tool-context'
 import type { createHarnessMcpEndpoints } from './mcp'
 
 /** The ordinary Harness Agent owns chat/model/keys; Tylina contributes its live document and authoring contract. */
 export function createSessionBinder(workspaces: ReturnType<typeof createHarnessWorkspaces>, skillsRootPath: string,
-  runtime: TylinaToolRuntime, mcp: ReturnType<typeof createHarnessMcpEndpoints>) {
+  mcp: ReturnType<typeof createHarnessMcpEndpoints>) {
   let core: Promise<string> | undefined
   return async (sessionId: string, call: EditorToolCaller, signal: AbortSignal, project = '') => {
     const { agent, path } = await workspaces.resolve(sessionId, project, signal)
     const instructions = await (core ??= loadTylinaMcpCoreSkillInstructions({ skillsRootPath }))
-    const contract = createTylinaMcpSessionInstructions(instructions, 'memory')
+    const contract = createTylinaMcpSessionInstructions(instructions, 'filesystem')
     const connected = `Tylina is connected to this session's document project at ${path}. ` +
-      'Its file tools use paths relative to that project. ' +
+      'Use the Harness file tools with this project path. ' +
       'This current Tylina contract supersedes earlier Tylina instructions and connection notices. ' +
-      'Read and change the live document through Tylina tools so unsaved user edits and Undo are retained. ' +
+      'Tylina provides editor selection, compilation, preview and export. ' +
       'Other filesystem tools and scripts use the Harness working directory and their edits arrive as external changes. ' +
       'Do not infer that a disconnected tool completed or retry an uncertain write without inspecting the current document.'
     signal.throwIfAborted()
-    const execute = withHarnessToolRuntime(call, runtime, path, skillsRootPath)
+    const execute = withWorkspaceToolContext(call, path, skillsRootPath)
     const pending = new Set<ReturnType<EditorToolCaller>>()
     const invoke: EditorToolCaller = (name, input, callerSignal) => {
       const task = Promise.resolve().then(() => execute(name, input, AbortSignal.any([signal, callerSignal])))
@@ -41,7 +40,6 @@ export function createSessionBinder(workspaces: ReturnType<typeof createHarnessW
     const dispose = async () => {
       unregister?.()
       const closing = endpoint?.dispose()
-      // Include Node-owned runtime requests, which do not pass through the editor socket.
       await Promise.allSettled([...pending])
       await closing
       await owner.dispose()

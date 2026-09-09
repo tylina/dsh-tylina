@@ -99,18 +99,30 @@ export async function openHarnessDocument(container: HTMLElement, options: {
       return acknowledgment
     }
   }).catch((error) => { lifetime.abort(); options.prepared.dispose(); throw error })
-  const refresh = async () => {
+  let refreshing: Promise<void> | undefined
+  const refresh = (): Promise<void> => refreshing ??= (async () => {
     const expectedRevision = revision
-    try {
-      const response = await projectRequest(url, { headers: { 'If-None-Match': `"${expectedRevision}"` }, signal: lifetime.signal })
-      if (closed || response.status === 304 || revision !== expectedRevision) return
-      const next = await response.json() as ProjectSnapshot
-      if (closed || revision !== expectedRevision) return
-      await editor.refreshWorkspace(decodeWorkspace(next.workspace), { expectedRevision, revision: next.revision })
-      if (revision === expectedRevision) revision = next.revision
-    } catch (error) {
-      if (revision === expectedRevision) report(error instanceof Error ? error : new Error(String(error)))
-    } finally { if (!closed) timer = setTimeout(() => { void refresh() }, 1000) }
+    const response = await projectRequest(url, { headers: { 'If-None-Match': `"${expectedRevision}"` }, signal: lifetime.signal })
+    if (closed || response.status === 304 || revision !== expectedRevision) return
+    const next = await response.json() as ProjectSnapshot
+    if (closed || revision !== expectedRevision) return
+    await editor.refreshWorkspace(decodeWorkspace(next.workspace), { expectedRevision, revision: next.revision })
+    if (revision === expectedRevision) revision = next.revision
+  })().finally(() => { refreshing = undefined })
+  const poll = async () => {
+    try { await refresh() }
+    catch (error) { report(error instanceof Error ? error : new Error(String(error))) }
+    finally { if (!closed) timer = setTimeout(() => { void poll() }, 1000) }
+  }
+  const toolEditor: Pick<TylinaEditor, 'callTool'> = {
+    async callTool(name, input, context) {
+      context?.signal?.throwIfAborted()
+      // Finish an older poll, then obtain a fresh snapshot after the Harness edit.
+      // Never validate/export pre-edit source or swallow a refresh conflict.
+      await whileActive((async () => { await refreshing; await refresh() })(), context?.signal)
+      context?.signal?.throwIfAborted()
+      return editor.callTool(name, input, context)
+    }
   }
   const reconnectTools = (): Promise<void> => {
     if (closed) return Promise.reject(new Error('The Harness document is closed'))
@@ -118,7 +130,7 @@ export async function openHarnessDocument(container: HTMLElement, options: {
       await tools?.release()
       if (closed) throw new Error('The Harness document is closed')
       tools = connectHarnessEditor({ url: socketUrl('/tylina/editor'), sessionId: options.sessionId, project: options.project,
-        editor, onDisconnect: report })
+        editor: toolEditor, onDisconnect: report })
       await tools.ready
     })().finally(() => { reconnecting = undefined })
   }
@@ -128,9 +140,20 @@ export async function openHarnessDocument(container: HTMLElement, options: {
   }
   // A tools connection failure preserves the editable project and its unsaved input.
   void reconnectTools().catch(report)
-  timer = setTimeout(() => { void refresh() }, 1000)
+  timer = setTimeout(() => { void poll() }, 1000)
   return { editor, reconnectTools, dispose, mcpConfiguration() {
     if (!tools) throw new Error('The document tools are not connected')
     return tools.mcpConfiguration()
   } }
+}
+
+/** Cancelling a tool does not cancel a shared background refresh or delay release. */
+function whileActive<T>(pending: Promise<T>, signal?: AbortSignal): Promise<T> {
+  if (!signal) return pending
+  return new Promise((resolve, reject) => {
+    const abort = () => reject(signal.reason ?? new DOMException('Cancelled', 'AbortError'))
+    signal.addEventListener('abort', abort, { once: true })
+    if (signal.aborted) abort()
+    pending.then(resolve, reject).finally(() => signal.removeEventListener('abort', abort))
+  })
 }

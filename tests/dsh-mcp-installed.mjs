@@ -1,7 +1,8 @@
+import { readEditorSource } from './dsh-source.mjs'
 import { commandInput } from './command-input.mjs'
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
-import { readFile } from 'node:fs/promises'
+import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
 export async function verifyInstalledMcp({ page, frame, root, project, readMain, mode, expectedMissing }) {
@@ -35,13 +36,11 @@ export async function verifyInstalledMcp({ page, frame, root, project, readMain,
     await client.connect(transport)
     const catalog = await client.listTools()
     assert.equal(catalog.tools.length, 1)
-    assert.match(client.getInstructions(), /session-scoped Typst authoring contract/)
+    assert.match(client.getInstructions(), /one tool named `tylina`/)
     const call = (name, args = {}) => client.callTool(commandInput(name, args))
     const info = (await call('tylina_workspace_info')).structuredContent
     assert.equal(info.root, project)
-    const read = (await call('tylina_read_file', { file: 'Plugin.typ' })).structuredContent
     const original = await readMain()
-    assert.equal(read.text, original)
     const views = (await call('tylina_view_state')).structuredContent
     assert.notEqual((await call('tylina_set_view', { target: 'mode', value: 'split' })).isError, true)
     await frame.getByTestId('monaco-source-editor').click({ position: { x: 180, y: 12 } })
@@ -50,11 +49,13 @@ export async function verifyInstalledMcp({ page, frame, root, project, readMain,
     const context = (await call('tylina_editor_context')).structuredContent
     assert.equal(context.selection.text, original, 'stdio reads the real selection after focus leaves the editor')
     assert.equal(context.selection.file, 'Plugin.typ')
-    assert.equal(context.selection.sourceSha256, read.sha256)
+    assert.equal(context.selection.sourceSha256, undefined)
     assert.notEqual((await call('tylina_set_view', { target: 'mode', value: views.mode })).isError, true)
     const source = original + '\r\n\r\nEdited through the shared MCP connection.'
-    assert.notEqual((await call('tylina_edit_file', { file: 'Plugin.typ', expectedSha256: read.sha256,
-      edits: [{ start: original.length, end: original.length, text: source.slice(original.length) }] })).isError, true)
+    await writeFile(join(project, 'Plugin.typ'), source)
+    const probe = async input => ({ isError: false, value: await client.callTool({ name: input.name, arguments: input.input }) })
+    await expect.poll(async () => (await readEditorSource(page, probe)).text).toBe(source)
+    await expect(frame.getByTestId('tylina-root')).toHaveAttribute('data-compile-status', 'success')
     await expect.poll(readMain).toBe(source)
     assert.equal((await call('tylina_validate_document')).structuredContent.valid, true)
     const image = await call('tylina_render_page', { page: 1, ppi: 48 })
@@ -74,13 +75,11 @@ export async function verifyInstalledMcp({ page, frame, root, project, readMain,
         else assert.ok(bytes.toString().includes('<svg'))
       }
     }
-    const skill = await call('tylina_read_skill_resource', { path: 'typst-slides/SKILL.md' })
-    assert.equal(skill.structuredContent.available, true, JSON.stringify(skill.structuredContent))
-    assert.ok(skill.content.some((entry) => entry.type === 'text' && entry.text.includes('Typst')))
+    assert.match(await readFile(join(info.skillsRoot, 'typst-slides/SKILL.md'), 'utf8'), /Typst/)
     const templates = await call('tylina_list_templates', { query: 'amber', limit: 10 })
     assert.ok(templates.structuredContent.templates.some((entry) => entry.spec.startsWith('tylina:slides/')))
-    const next = (await call('tylina_read_file', { file: 'Plugin.typ' })).structuredContent
-    assert.notEqual((await call('tylina_write_file', { file: 'Plugin.typ', contents: original, expectedSha256: next.sha256 })).isError, true)
+    await writeFile(join(project, 'Plugin.typ'), original)
+    await expect.poll(async () => (await readEditorSource(page, probe)).text).toBe(original)
     await expect.poll(readMain).toBe(original)
     await expect(frame.getByTestId('external-edit-transition')).toHaveCount(0)
     await page.getByRole('button', { name: /^(重新连接 Agent 工具|Reconnect Agent tools)$/u }).click()

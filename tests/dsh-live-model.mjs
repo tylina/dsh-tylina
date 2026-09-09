@@ -21,16 +21,18 @@ export async function verifyLiveModel({ page, frame, project, readMain, probeReq
   assert.deepEqual(errors, [], 'keyboard selection must not produce editor errors')
   await page.locator('.tylina-dsh-panel').getByRole('button').first().focus()
   await probeRequest({ action: 'live-turn', prompt:
-    'Read my current editor selection with Tylina editor.state. Replace only the selected text with "Real DSH selection verified." using file.edit; preserve all other bytes. Validate and save the document. Export PDF to output/RealAgent.pdf, PNG pages into output/png and SVG pages into output/svg. Use only the single Tylina tool for these document operations; discover its commands with help if needed. Do not modify other files. Keep the final response short.' })
+    'Read my current editor selection with Tylina editor.state. Replace only the selected text with "Real DSH selection verified." using your ordinary Harness read/edit tools; preserve all other bytes. Validate and save the document. Export PDF to output/RealAgent.pdf, PNG pages into output/png and SVG pages into output/svg. Use Tylina for editor state, validation and export. Use Harness tools for files. Do not modify other files. Keep the final response short.' })
   await expect.poll(async () => {
     const current = await probeRequest({ action: 'live-state' })
     if (current.errors.length) throw new Error(JSON.stringify(current.errors))
     return current.replied && current.status === 'idle'
   }, { timeout: 240_000 }).toBe(true)
   const final = await probeRequest({ action: 'live-state' })
-  for (const command of ['editor.state', 'file.edit', 'document.validate', 'document.export']) {
+  for (const command of ['editor.state', 'document.validate', 'document.export']) {
     assert.ok(final.commands.includes(command), `The real model must execute ${command}`)
   }
+  assert.ok(final.commands.every(command => !command.startsWith('file.')))
+  assert.ok(final.tools.includes('edit') || final.tools.includes('write'))
   await expect.poll(readMain).toBe(before.slice(0, offset) + replacement + before.slice(offset + selected.length))
   assert.equal((await readFile(join(project, 'output/RealAgent.pdf'))).subarray(0, 5).toString(), '%PDF-')
   expectedMissing.add('output/RealAgent.pdf')
@@ -44,5 +46,5 @@ export async function verifyLiveModel({ page, frame, project, readMain, probeReq
     if (format === 'png') assert.equal(bytes.subarray(0, 8).toString('hex'), '89504e470d0a1a0a')
     else assert.ok(bytes.toString().includes('<svg'))
   }
-  console.log('PASS: real DSH DeepSeek reads the human selection, edits its exact range, validates, saves and exports PDF/PNG/SVG through one Tylina tool')
+  console.log('PASS: real DSH DeepSeek reads the human selection, uses Harness editing, validates, saves and exports PDF/PNG/SVG with one Tylina tool')
 }

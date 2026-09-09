@@ -1,3 +1,4 @@
+import { readEditorSource, writeHarnessSource } from './dsh-source.mjs'
 import assert from 'node:assert/strict'
 import { join } from 'node:path'
 
@@ -69,15 +70,13 @@ export async function verifyDock({ page, frame, iframe, context, root, mode, rea
     await expect.poll(() => blocked.isClosed()).toBe(true)
     await expect(iframe).toBeVisible()
     assert.equal(await readMain(), external, 'a rejected save never changes the project on disk')
-    const unsaved = (await probeRequest({ name: 'tylina_read_file', input: { file: 'Plugin.typ' } })).value.structuredContent
+    const unsaved = await readEditorSource(page, probeRequest)
     assert.equal(unsaved.text, external + ' Unsaved window handoff.', 'failed handoff preserves unsaved editor text')
   } finally { await page.unroute('**/tylina/project?**', rejectSave) }
   await menu('File', 'Save')
   await expect.poll(readMain).toBe(external + ' Unsaved window handoff.')
-  const saved = (await probeRequest({ name: 'tylina_read_file', input: { file: 'Plugin.typ' } })).value.structuredContent
-  assert.equal((await probeRequest({ name: 'tylina_write_file', input: {
-    file: 'Plugin.typ', contents: external, expectedSha256: saved.sha256
-  } })).isError, false)
+  const saved = await readEditorSource(page, probeRequest)
+  await writeHarnessSource(probeRequest, external)
   await expect.poll(readMain).toBe(external)
   await frame.getByRole('button', { name: 'Split', exact: true }).click()
   await panel.getByRole('button', { name: /^(关闭提示|Dismiss message)$/u }).click()
@@ -94,12 +93,10 @@ export async function verifyDock({ page, frame, iframe, context, root, mode, rea
   await expect(detached.locator('.web-document-title')).toHaveText('project')
   const toolCount = async () => (await probeRequest({ action: 'catalog' })).filter((tool) => tool.name === 'tylina').length
   await expect.poll(toolCount).toBe(1)
-  const read = (await probeRequest({ name: 'tylina_read_file', input: { file: 'Plugin.typ' } })).value.structuredContent
+  const read = await readEditorSource(popup, probeRequest)
   assert.equal(read.text, external)
   const text = external + '\r\n\r\nEdited in a separate window.'
-  assert.equal((await probeRequest({ name: 'tylina_write_file', input: {
-    file: 'Plugin.typ', contents: text, expectedSha256: read.sha256
-  } })).isError, false)
+  await writeHarnessSource(probeRequest, text)
   await expect.poll(readMain).toBe(text)
   await popup.screenshot({ path: join(root, `.benchmarks/dsh-${mode}-window.png`) })
   await popup.getByRole('button', { name: /^(返回侧边栏|Return to sidebar)$/u }).click()
@@ -107,12 +104,10 @@ export async function verifyDock({ page, frame, iframe, context, root, mode, rea
   await expect(frame.locator('.typst-doc')).toBeVisible({ timeout: 30_000 })
   await expect.poll(toolCount).toBe(1)
   await expect.poll(readMain).toBe(text)
-  const latest = (await probeRequest({ name: 'tylina_read_file', input: { file: 'Plugin.typ' } })).value.structuredContent
+  const latest = await readEditorSource(page, probeRequest)
   assert.equal(latest.text, text)
   // Restore the fixture through the real tool so the remaining suite has a stable baseline.
-  assert.equal((await probeRequest({ name: 'tylina_write_file', input: {
-    file: 'Plugin.typ', contents: external, expectedSha256: latest.sha256
-  } })).isError, false)
+  await writeHarnessSource(probeRequest, external)
   await expect.poll(readMain).toBe(external)
   await expect(chat).toHaveText('Keep this conversation draft while editing the document.')
   await chat.fill('')

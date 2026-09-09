@@ -68,8 +68,8 @@ test(`${mode}: real HTTP MCP discovers the shared tools, instructions and images
     const { tools } = await client.listTools()
     assert.equal(tools.length, 1)
     assert.equal(tools[0].name, 'tylina')
-    const help = await client.callTool({ name: 'tylina', arguments: { command: 'help', args: { command: 'file.write' } } })
-    assert.ok(help.structuredContent.inputSchema.required.includes('expectedSha256'))
+    const help = await client.callTool({ name: 'tylina', arguments: { command: 'help', args: { command: 'document.setMain' } } })
+    assert.ok(help.structuredContent.inputSchema.required.includes('file'))
     const result = await client.callTool({ name: 'tylina_render_page', arguments: { page: 1 } })
     assert.equal(result.structuredContent.project, 'bound-project')
     assert.equal(result.content[1].mimeType, 'image/png')
@@ -100,9 +100,7 @@ test(`${mode}: HTTP cancellation and editor expiry reach actual pending work wit
   try {
     client = await connect(env.origin, bound.connection, mode)
     const abort = new AbortController()
-    const pending = client.callTool({ name: 'tylina_write_file', arguments: {
-      file: 'main.typ', contents: 'test', expectedSha256: null
-    } }, { signal: abort.signal })
+    const pending = client.callTool({ name: 'tylina_set_main_file', arguments: { file: 'main.typ' } }, { signal: abort.signal })
     const rejected = assert.rejects(pending)
     const signal = await entered.promise
     const stopped = once(signal, 'abort')
@@ -135,14 +133,14 @@ test('SDK CLI uses the same authenticated command protocol and preserves failure
         const help = await run(process.execPath, [process.env.TYLINA_SDK_CLI, 'help'], options)
         assert.ok(JSON.parse(help.stdout).structuredContent.commands.some((item) => item.command === 'editor.state'))
       }
-      const read = await run(process.execPath, [process.env.TYLINA_SDK_CLI, 'file.read', '--args', JSON.stringify({ file: 'notes.typ' })], options)
+      const read = await run(process.execPath, [process.env.TYLINA_SDK_CLI, 'document.targets', '--args', JSON.stringify({ file: 'notes.typ' })], options)
       assert.equal(JSON.parse(read.stdout).structuredContent.received.file, 'notes.typ')
-      assert.equal(calls.at(-1).name, 'tylina_read_file')
+      assert.equal(calls.at(-1).name, 'tylina_semantic_targets')
       const connectionFile = join(temporary, 'copied-mcp.json')
       await writeFile(connectionFile, JSON.stringify({ mcpServers: { tylina: { type: 'http',
         url: options.env.TYLINA_MCP_URL, headers: { Authorization: `Bearer ${bound.connection.token}` } } } }), { mode: 0o600 })
       const fileEnv = { ...process.env }; delete fileEnv.TYLINA_MCP_URL; delete fileEnv.TYLINA_MCP_TOKEN
-      const fromFile = await run(process.execPath, [process.env.TYLINA_SDK_CLI, 'file.read', '--connection', connectionFile,
+      const fromFile = await run(process.execPath, [process.env.TYLINA_SDK_CLI, 'document.targets', '--connection', connectionFile,
         '--args', JSON.stringify({ file: 'copied.typ' })], { ...options, env: fileEnv })
       assert.equal(JSON.parse(fromFile.stdout).structuredContent.received.file, 'copied.typ')
       await assert.rejects(run(process.execPath, [process.env.TYLINA_SDK_CLI, 'file.edit', '--args', '{}'], options), (error) => error.code === 1)
@@ -183,7 +181,7 @@ test(`${mode}: SDK stdio exposes only the live gateway and preserves instruction
       assert.equal(invalid.isError, true)
       assert.equal(count, 1)
       const abort = new AbortController()
-      const pending = client.callTool({ name: 'tylina', arguments: { command: 'file.read', args: { file: 'wait.typ' } } }, { signal: abort.signal })
+      const pending = client.callTool({ name: 'tylina', arguments: { command: 'document.targets', args: { file: 'wait.typ' } } }, { signal: abort.signal })
       const rejected = assert.rejects(pending)
       const signal = await entered.promise
       const stopped = once(signal, 'abort')
@@ -231,7 +229,7 @@ test('SDK stdio releases its HTTP connection on stdin EOF and SIGTERM',
           assert.ok(JSON.parse((await initialized)[0]).result)
           child.stdin.write(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) + '\n')
           child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/call', params: {
-            name: 'tylina', arguments: { command: 'file.read', args: { file: 'pending.typ' } },
+            name: 'tylina', arguments: { command: 'document.targets', args: { file: 'pending.typ' } },
           } }) + '\n')
           const pendingSignal = await entered.promise
           const cancelled = once(pendingSignal, 'abort', { signal: t.signal })

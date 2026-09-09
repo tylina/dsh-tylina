@@ -48,6 +48,7 @@ export function apply(ctx) {
         const commands = events.filter((event) => event.type === 'tool/call' && event.data.name === 'tylina')
           .map((event) => { try { return JSON.parse(event.data.arguments).command } catch { return null } })
         const value = { status: agent.status, commands,
+          tools: events.filter(event => event.type === 'tool/call').map(event => event.data.name),
           replied: events.some((event) => event.type === 'assistant/message'),
           errors: events.filter((event) => event.type.endsWith('/error')).map((event) => event.type) }
         response.writeHead(200, { 'Content-Type': 'application/json' }); response.end(JSON.stringify(value)); return

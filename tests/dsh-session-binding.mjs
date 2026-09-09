@@ -36,7 +36,7 @@ test('reconnecting registers one current scoped context without queuing chat mes
   agent.ctx = createScope(ctx, agent).ctx
   let opens = 0, closes = 0
   const bind = createSessionBinder({ resolve: async (_id, project) => ({ agent, path: join(temporary, project || 'first') }) },
-    join(assetsRoot, 'skills'), {}, { open: () => {
+    join(assetsRoot, 'skills'), { open: () => {
       opens++; return { connection: {}, dispose: async () => { closes++ } }
     } })
   const sections = async () => renderContextSections(await ctx.systemPrompt.assemble({ scope: agent }))
@@ -50,6 +50,8 @@ test('reconnecting registers one current scoped context without queuing chat mes
         assert.equal(current.length, 1)
         assert.equal(current[0].name, 'tylina')
         assert.ok(current[0].text.includes('one tool named `tylina`'))
+        assert.ok(current[0].text.includes('Use your own harness tools'))
+        assert.ok(!current[0].text.includes('Read and change the live document through Tylina tools'))
         assert.ok(current[0].text.includes(join(temporary, 'first')))
         first ??= current
         assert.deepEqual(current, first, 'DSH can deduplicate an unchanged context across reconnects')

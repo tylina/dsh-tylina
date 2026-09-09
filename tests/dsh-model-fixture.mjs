@@ -1,5 +1,6 @@
 import { commandInput } from './command-input.mjs'
 import assert from 'node:assert/strict'
+import { join } from 'node:path'
 import { LlmAdapter } from '@deepseek-ai/dsh-llm'
 
 /** Deterministic model boundary; the installed Harness owns the actual loop, history and tools. */
@@ -48,17 +49,21 @@ export function createModelFixture(ctx) {
         const value = () => JSON.parse(prior.content.filter((block) => block.type === 'text').map((block) => block.text).join('\n'))
         let name, input
         switch (run.step++) {
-          case 0: name = 'tylina_read_file'; input = { file: 'Plugin.typ' }; break
-          case 1: {
-            const read = value()
-            run.expected = `${read.text}\r\n${run.marker}`
-            name = 'tylina_write_file'; input = { file: 'Plugin.typ', contents: run.expected, expectedSha256: read.sha256 }; break
-          }
-          case 2: name = 'tylina_validate_document'; input = {}; break
-          case 3:
+          case 0: name = 'tylina_workspace_info'; input = {}; break
+          case 1:
+            run.file = join(value().root, 'Plugin.typ')
+            name = 'read'; input = { file_path: run.file }; break
+          case 2:
+            // The Harness read receipt is line-numbered text; editing a unique literal
+            // does not require reconstructing the file or carrying a model-facing hash.
+            assert.ok(prior.content.some(block => block.type === 'text' && block.text.includes('External Harness edit')))
+            name = 'edit'; input = { file_path: run.file,
+              old_string: 'External Harness edit', new_string: `External Harness edit\r\n${run.marker}` }; break
+          case 3: name = 'tylina_validate_document'; input = {}; break
+          case 4:
             assert.equal(value().valid, true)
             name = 'tylina_export_document'; input = { format: 'pdf', destination: 'output/Agent.pdf', overwrite: true }; break
-          case 4:
+          case 5:
             assert.deepEqual(value().paths, ['output/Agent.pdf'])
             name = 'tylina_render_page'; input = { page: 1 }; break
           default:

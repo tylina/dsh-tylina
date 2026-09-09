@@ -64,7 +64,7 @@ test('released Harness scopes share the complete catalog and keep each tool boun
   try {
     assert.equal(ctx.tools.schemas(alpha).length, 1)
     assert.equal(ctx.tools.schemas().length, 0)
-    const first = await run(alpha, 'tylina_read_file', { file: 'main.typ' })
+    const first = await run(alpha, 'tylina_workspace_info', { file: 'main.typ' })
     const second = await run(beta, 'tylina_validate_document')
     assert.equal(first.isError, false)
     assert.equal(second.isError, false)
@@ -74,8 +74,8 @@ test('released Harness scopes share the complete catalog and keep each tool boun
     assert.equal((await run({ id: 'alpha' }, 'tylina_write_file')).isError, true, 'an unrelated Agent with a copied string id has no registered tool scope')
     releaseAlpha()
     assert.equal(ctx.tools.schemas(alpha).length, 0)
-    assert.equal((await run(alpha, 'tylina_read_file')).isError, true)
-    assert.equal((await run(beta, 'tylina_read_file', { file: 'main.typ' })).isError, false)
+    assert.equal((await run(alpha, 'tylina_workspace_info')).isError, true)
+    assert.equal((await run(beta, 'tylina_workspace_info', { file: 'main.typ' })).isError, false)
     releaseBeta()
   } finally { await ctx.fiber.dispose() }
 })
@@ -111,7 +111,7 @@ test('Harness owns image persistence, tool failures, cancellation and disposable
     pending = new Promise((resolve) => { release = resolve })
     const abort = new AbortController()
     let settled = false
-    const cancelled = run(agent, 'tylina_write_file', { file: 'main.typ', contents: 'pending', expectedSha256: null }, abort.signal).finally(() => { settled = true })
+    const cancelled = run(agent, 'tylina_set_main_file', { file: 'main.typ' }, abort.signal).finally(() => { settled = true })
     await new Promise((resolve) => setImmediate(resolve))
     abort.abort(new Error('User cancelled'))
     assert.equal(activeSignal.aborted, true)

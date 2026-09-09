@@ -1,5 +1,5 @@
+import { readEditorSource, writeHarnessSource } from './dsh-source.mjs'
 import assert from 'node:assert/strict'
-import { createHash } from 'node:crypto'
 import { join } from 'node:path'
 
 /** A detached editor keeps its real workspace and tools when its original launcher disappears. */
@@ -35,14 +35,14 @@ export async function verifyWindowRecovery({ page, context, root, mode, sessionI
     await expect(popup.getByRole('alert')).toContainText(/save issue|保存问题/u)
     assert.equal(popup.isClosed(), false)
     await expect(page.locator('.tylina-dsh-panel iframe')).toHaveCount(0)
-    const unsaved = (await probe(popup, { name: 'tylina_read_file', input: { file: 'Plugin.typ' } })).value.structuredContent
+    const unsaved = await readEditorSource(popup, input => probe(popup, input))
     assert.equal(unsaved.text, original + ' Keep this unsaved document.')
     assert.equal(await readMain(), original)
   } finally { await popup.unroute('**/tylina/project?**', rejectSave) }
-  const unsaved = (await probe(popup, { name: 'tylina_read_file', input: { file: 'Plugin.typ' } })).value.structuredContent
-  assert.equal((await probe(popup, { name: 'tylina_write_file', input: {
-    file: 'Plugin.typ', contents: original, expectedSha256: unsaved.sha256
-  } })).isError, false)
+  await popup.frameLocator('iframe').getByTestId('monaco-source-editor').click()
+  await popup.keyboard.press('ControlOrMeta+a')
+  await popup.keyboard.insertText(original)
+  await probe(popup, { name: 'tylina', input: { command: 'workspace.save' } })
   await popup.getByRole('button', { name: /^(返回侧边栏|Return to sidebar)$/u }).click()
   await expect.poll(() => popup.isClosed(), { timeout: 30_000 }).toBe(true)
   await expect(page.frameLocator('.tylina-dsh-panel iframe').locator('.typst-doc')).toBeVisible({ timeout: 30_000 })
@@ -57,16 +57,8 @@ export async function verifyWindowRecovery({ page, context, root, mode, sessionI
     assert.equal(context.pages().length, 1)
     await expect(popup.frameLocator('iframe').locator('.typst-doc')).toBeVisible()
   } finally { await popup.evaluate(() => { window.open = window.__tylinaWindowOpen; delete window.__tylinaWindowOpen }) }
-  const read = (await probe(popup, { name: 'tylina_read_file', input: { file: 'Plugin.typ' } })).value.structuredContent
   const changed = original + '\r\n\r\nThe detached workspace survives its launcher.\r\n'
-  const requested = original + '\n\nThe detached workspace survives its launcher.\n'
-  const written = await probe(popup, { name: 'tylina_write_file', input: {
-    file: 'Plugin.typ', contents: requested, expectedSha256: read.sha256
-  } })
-  assert.equal(written.isError, false, JSON.stringify({ written, requested, stored: await readMain(),
-    current: await probe(popup, { name: 'tylina_read_file', input: { file: 'Plugin.typ' } }) }))
-  assert.deepEqual(written.value.structuredContent.files, [{ file: 'Plugin.typ',
-    sha256: createHash('sha256').update(changed).digest('hex'), lineEndingsNormalized: true }])
+  await writeHarnessSource(input => probe(popup, input), changed)
   await expect.poll(readMain).toBe(changed)
   const reopened = context.waitForEvent('page')
   await popup.getByRole('button', { name: /^(聚焦此会话|Focus this conversation)$/u }).click()
@@ -85,7 +77,7 @@ export async function verifyWindowRecovery({ page, context, root, mode, sessionI
   await expect(parent.frameLocator('.tylina-dsh-panel iframe').locator('.typst-doc')).toBeVisible({ timeout: 30_000 })
   assert.equal(navigations, 0, 'returning a reloaded popup must not reload an already open Harness tab')
   await expect(chat).toHaveText('Preserve my conversation draft when the document window reloads.')
-  const restored = (await probe(parent, { name: 'tylina_read_file', input: { file: 'Plugin.typ' } })).value.structuredContent
+  const restored = await readEditorSource(parent, input => probe(parent, input))
   assert.equal(restored.text, changed)
   popup = await popout(parent)
   await parent.reload()

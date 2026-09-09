@@ -10,7 +10,6 @@ import { registerTylinaSkills } from './skills'
 import { createHarnessWorkspaces } from './workspaces'
 import { createEditorSocket } from './editor-socket'
 import { createSessionBinder } from './session-binding'
-import { createHarnessToolRuntime } from './tool-runtime'
 import { createHarnessMcpEndpoints } from './mcp'
 import { version } from '../package.json'
 
@@ -37,10 +36,9 @@ export async function apply(ctx: Context, config: Config = {}): Promise<void> {
   } }))
   ctx.effect(() => {
     const workspaces = createHarnessWorkspaces(ctx, mode)
-    const toolRuntime = createHarnessToolRuntime()
     const mcp = createHarnessMcpEndpoints({ version, requestRejection: (request) => ctx.connection.requestRejection(request) })
     const editors = createEditorSocket({ authorize: (request) => ctx.connection.requestRejection(request),
-      bind: createSessionBinder(workspaces, skillsRoot, toolRuntime, mcp) })
+      bind: createSessionBinder(workspaces, skillsRoot, mcp) })
     const unregisterMcp = ctx.webServer.register({ kind: 'prefix', path: '/tylina/mcp', handler: mcp.handle })
     const unregisterProjects = ctx.webServer.register({ kind: 'exact', path: '/tylina/project', async handler(request, response) {
       const rejection = ctx.connection.requestRejection(request)
@@ -49,7 +47,7 @@ export async function apply(ctx: Context, config: Config = {}): Promise<void> {
     } })
     const unregisterEditor = ctx.webServer.registerUpgrade({ path: '/tylina/editor', handler: editors.upgrade })
     return async () => { unregisterProjects(); unregisterEditor(); unregisterMcp();
-      await editors.dispose(); await mcp.dispose(); await toolRuntime.dispose(); await workspaces.dispose() }
+      await editors.dispose(); await mcp.dispose(); await workspaces.dispose() }
   })
   if (mode === 'native') {
     ctx.effect(() => {

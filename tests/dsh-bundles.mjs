@@ -1,3 +1,4 @@
+import { readEditorSource, writeHarnessSource } from './dsh-source.mjs'
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { spawn, execFile } from 'node:child_process'
@@ -234,11 +235,7 @@ for (const mode of modes) {
     const info = (await probeRequest({ name: 'tylina_workspace_info' })).value.structuredContent
     assert.equal(info.root, project)
     await access(join(info.skillsRoot, 'typst-slides/scripts/rotate_images.py'))
-    const runtime = (await probeRequest({ name: 'tylina_tool_runtime' })).value.structuredContent
-    assert.equal(runtime.status, 'ready')
-    assert.equal(runtime.workspaceRoot, project)
-    assert.equal(runtime.skillsRoot, info.skillsRoot)
-    assert.match((await run(runtime.uvExecutable, ['--version'], { env: { ...env, ...runtime.environment }, cwd: project })).stdout, /^uv /u)
+    assert.match(await readFile(join(info.skillsRoot, 'typst-slides/SKILL.md'), 'utf8'), /Typst/)
     await expect.poll(readMain).toBe(source)
     await menu('Format', 'Format Document')
     await expect.poll(readMain).toContain('#let title = "Tylina in dsh"')
@@ -264,17 +261,15 @@ for (const mode of modes) {
     const edited = formatted + ' updated'
     await page.keyboard.insertText(' updated')
     await expect.poll(readMain).toBe(edited)
-    const read = (await probeRequest({ name: 'tylina_read_file', input: { file: 'Plugin.typ' } })).value.structuredContent
     const agentEdited = edited + ' Agent tool'
-    assert.equal((await probeRequest({ name: 'tylina_write_file', input: {
-      file: 'Plugin.typ', contents: agentEdited, expectedSha256: read.sha256
-    } })).isError, false)
+    await writeHarnessSource(probeRequest, agentEdited)
+    await expect.poll(async () => (await readEditorSource(page, probeRequest)).text).toBe(agentEdited)
     await expect.poll(readMain).toBe(agentEdited)
     await menu('Edit', 'Undo'); await expect.poll(readMain).toBe(edited)
     await menu('Edit', 'Redo'); await expect.poll(readMain).toBe(agentEdited)
     const external = agentEdited + '\r\n\r\nExternal Harness edit'
     await writeFile(join(project, 'Plugin.typ'), external)
-    await expect.poll(async () => (await probeRequest({ name: 'tylina_read_file', input: { file: 'Plugin.typ' } })).value.structuredContent.text).toBe(external)
+    await expect.poll(async () => (await readEditorSource(page, probeRequest)).text).toBe(external)
     await menu('Edit', 'Undo'); await expect.poll(readMain).toBe(agentEdited)
     await menu('Edit', 'Redo'); await expect.poll(readMain).toBe(external)
     await frame.getByRole('button', { name: 'Agent', exact: true }).click()
@@ -323,6 +318,7 @@ for (const mode of modes) {
     assert.equal(instructions.status, 'idle', 'opening a document does not start an inference task')
     for (const marker of ['Agent loop verified.', 'Continued after compaction.']) {
       if (marker.startsWith('Continued')) await probeRequest({ action: 'compact' })
+      const beforeTurn = await readMain()
       await probeRequest({ action: 'turn', marker })
       await expect.poll(async () => {
         const state = await probeRequest({ action: 'model' })
@@ -330,8 +326,8 @@ for (const mode of modes) {
         return state.complete && state.status === 'idle'
       }, { timeout: 60_000 }).toBe(true)
       const state = await probeRequest({ action: 'model' })
-      assert.equal(state.requests.length, 6)
-      await expect.poll(readMain).toBe(state.expected)
+      assert.equal(state.requests.length, 7)
+      await expect.poll(readMain).toBe(beforeTurn.replace('External Harness edit', `External Harness edit\r\n${marker}`))
       const pdf = await readFile(join(project, 'output/Agent.pdf'))
       assert.equal(pdf.subarray(0, 5).toString(), '%PDF-')
     }

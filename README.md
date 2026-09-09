@@ -17,7 +17,7 @@ Edit typeset Typst documents inside DeepSeek Harness. Share a workspace with you
 Already using DeepSeek Harness? Install the browser WASM edition:
 
 ```sh
-dsh plugin --profile web add dsh-tylina@0.4.11
+dsh plugin --profile web add dsh-tylina
 dsh web
 ```
 
@@ -27,10 +27,6 @@ Update:
 dsh plugin --profile web update dsh-tylina@latest
 ```
 
-For a newly published release, use `dsh plugin --profile web update dsh-tylina@0.4.11`.
-[pnpm 11](https://github.com/pnpm/pnpm.io/blob/main/blog/releases/11.0.md) may defer `latest` updates for one day.
-
-
 Click **Tylina** to open the current conversation’s workspace automatically. Double-click a `.typ` file,
 or ask your agent to set the main document. Switch conversations and the editor follows; pin it to stay in one workspace.
 WASM lists folders as you expand them and reads only requested files, including Typst dependencies. The header also offers a separate window.
@@ -39,7 +35,7 @@ With Better Sidebar installed, Tylina joins its tabs; otherwise it provides its 
 <details>
 <summary><strong>Native edition, requirements, and switching</strong></summary>
 
-The browser edition is **0.4.11**; the published native edition remains **0.4.4** while its matching platform update is being validated. Choose browser WASM or native compilation on the Harness host.
+Choose browser WASM or native compilation on the Harness host. The next Native runtime update is still being validated; see [Releases](https://github.com/tylina/dsh-tylina/releases) for each edition’s available features and release notes.
 
 | Package | Compilation runs in | Choose it for |
 | --- | --- | --- |
@@ -57,6 +53,9 @@ dsh plugin --profile web add dsh-tylina-native
 Native updates: `dsh plugin --profile web update dsh-tylina-native@latest`.
 Verified with Harness `0.1.2-rc.1`, Node.js 22.19+ or 24, and pnpm 11.9.
 Restart a running Harness after installation or updates.
+
+If a just-published update is not picked up, [pnpm 11](https://github.com/pnpm/pnpm.io/blob/main/blog/releases/11.0.md)
+may be applying its release-age delay. Wait for it to become eligible, or use the exact update command in that [release](https://github.com/tylina/dsh-tylina/releases).
 
 </details>
 

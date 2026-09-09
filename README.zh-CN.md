@@ -17,7 +17,7 @@
 已有 DeepSeek Harness？安装浏览器 WASM 版：
 
 ```sh
-dsh plugin --profile web add dsh-tylina@0.4.11
+dsh plugin --profile web add dsh-tylina
 dsh web
 ```
 
@@ -26,10 +26,6 @@ dsh web
 ```sh
 dsh plugin --profile web update dsh-tylina@latest
 ```
-
-刚发布的版本可用 `dsh plugin --profile web update dsh-tylina@0.4.11` 明确升级。
-[pnpm 11](https://github.com/pnpm/pnpm.io/blob/main/blog/releases/11.0.md) 默认可能延后一天采用 `latest` 新版本。
-
 
 点击 **Tylina**，自动打开当前会话的工作区。双击 `.typ` 文件，或让 Agent 设置主文件。
 切换会话时编辑器自动跟随；点击固定按钮可以留在原工作区。
@@ -40,7 +36,7 @@ WASM 在展开文件夹时读取目录项，仅加载所需文件和真实编译
 <details>
 <summary><strong>原生版、环境要求与切换方式</strong></summary>
 
-WASM 版已更新到 **0.4.11**；原生正式版暂为 **0.4.4**，配套平台更新完成验证后再发布。可以选择浏览器 WASM 或 Harness 主机上的原生编译。
+可以选择浏览器 WASM 或 Harness 主机上的原生编译。下一次 Native 运行时更新仍在验证中；各版本可用能力和更新内容见 [Releases](https://github.com/tylina/dsh-tylina/releases)。
 
 | 包 | 编译在哪里运行 | 适合 |
 | --- | --- | --- |
@@ -58,6 +54,9 @@ dsh plugin --profile web add dsh-tylina-native
 原生版更新：`dsh plugin --profile web update dsh-tylina-native@latest`。
 当前验证环境：Harness `0.1.2-rc.1`、Node.js 22.19+ 或 24、pnpm 11.9。
 新装或更新后，重新启动正在运行的 Harness。
+
+如果没有升级到刚发布的版本，可能是 [pnpm 11](https://github.com/pnpm/pnpm.io/blob/main/blog/releases/11.0.md)
+的发布时间限制尚未解除。可以稍后再试，或使用对应 [Release](https://github.com/tylina/dsh-tylina/releases) 中的指定版本更新命令。
 
 </details>
 

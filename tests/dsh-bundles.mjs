@@ -318,7 +318,8 @@ for (const mode of modes) {
     assert.deepEqual(errors, [])
     await expect.poll(async () => (await probeRequest({ action: 'catalog' })).filter((tool) => tool.name === 'tylina').length).toBe(1)
     const instructions = await probeRequest({ action: 'instructions' })
-    assert.equal([...instructions.pending, ...instructions.recorded].filter((message) => message.source.form === 'instructions').length, 1)
+    assert.deepEqual([...instructions.pending, ...instructions.recorded], [],
+      'opening and reconnecting the editor must not append Tylina instructions or connection notices')
     assert.equal(instructions.status, 'idle', 'opening a document does not start an inference task')
     for (const marker of ['Agent loop verified.', 'Continued after compaction.']) {
       if (marker.startsWith('Continued')) await probeRequest({ action: 'compact' })

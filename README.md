@@ -52,10 +52,12 @@ dsh plugin --profile web add dsh-tylina-native
 
 Native updates: `dsh plugin --profile web update dsh-tylina-native@latest`.
 Verified with Harness `0.1.2-rc.1`, Node.js 22.19+ or 24, and pnpm 11.9.
-Restart a running Harness after installation or updates.
+Restart a running Harness after installation or updates. Check the installed version with
+`dsh plugin --profile web list dsh-tylina --depth 0` (use `dsh-tylina-native` for the native edition).
 
 If a just-published update is not picked up, [pnpm 11](https://github.com/pnpm/pnpm.io/blob/main/blog/releases/11.0.md)
-may be applying its release-age delay. Wait for it to become eligible, or use the exact update command in that [release](https://github.com/tylina/dsh-tylina/releases).
+may be applying its release-age delay: “Already up to date” can still mean the older eligible version.
+Wait for it to become eligible, or use the exact update command in that [release](https://github.com/tylina/dsh-tylina/releases).
 
 </details>
 

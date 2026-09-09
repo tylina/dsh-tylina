@@ -30,11 +30,14 @@ export function createModelFixture(ctx) {
           yield { type: 'finish', reason: { kind: 'stop' } }
           return
         }
-        const cores = options.messages.filter((message) => message.source.kind === 'plugin' &&
-          message.source.plugin === 'tylina' && message.source.form === 'instructions')
-        run.requests.push({ instructions: cores.length, tools: options.tools.filter((tool) => tool.name === 'tylina').length })
-        assert.equal(cores.length, 1, 'the current model context retains exactly one Tylina authoring contract')
-        assert.equal(run.requests.at(-1).tools, 1)
+        const snapshot = options.messages.findLast((message) => message.source.kind === 'plugin' &&
+          message.source.plugin === '@deepseek-ai/dsh-system-prompt')
+        const cores = snapshot?.source.sections?.filter((section) => section.name === 'tylina') ?? []
+        const tools = options.tools.filter((tool) => tool.name === 'tylina' || tool.name.startsWith('tylina_'))
+        run.requests.push({ instructions: cores.length, tools: tools.length })
+        assert.equal(cores.length, 1, 'the current runtime snapshot contains one Tylina authoring contract')
+        assert.ok(cores[0].text.includes('one tool named `tylina`'))
+        assert.deepEqual(tools.map((tool) => tool.name), ['tylina'])
         let prior
         if (run.lastCall) {
           prior = options.messages.flatMap((message) => message.content)

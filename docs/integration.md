@@ -107,9 +107,12 @@ the document; “Reconnect Agent tools” explicitly restores tool registration 
 
 The bound Agent receives one shared `tylina` command tool. `help` discovers operations and their schemas, including current unsaved file reads, version-checked writes,
 Typst validation, semantic document queries, templates, Skills and actual rendered image attachments.
-The ordinary Harness Agent owns model configuration, keys and chat. Opening a document queues the shared authoring
-instructions but does not start inference. Tool registration is session scoped and exclusively owned by one editor.
-Both bundles expose the complete Desktop Skill scripts in the Harness filesystem. `tylina_tool_runtime` supplies
+The ordinary Harness Agent owns model configuration, keys and chat. Tylina registers its current authoring contract
+and project as one session-scoped Harness runtime context. Harness snapshots it on the next user turn, only when
+changed, and restores it after compaction. Reopening or reconnecting does not enqueue connection notices or start
+inference. The current contract supersedes historical tool descriptions after an upgrade; old chat is preserved.
+Tool registration is session scoped and exclusively owned by one editor.
+Both bundles expose the complete Desktop Skill scripts in the Harness filesystem. the `runtime.prepare` command supplies
 the actual project and Skill roots and an isolated uv environment. It prefers installed system uv; when absent,
 an explicit tool request starts managed background installation using the shared Desktop installer.
 

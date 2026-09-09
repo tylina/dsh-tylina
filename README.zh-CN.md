@@ -54,9 +54,11 @@ dsh plugin --profile web add dsh-tylina-native
 原生版更新：`dsh plugin --profile web update dsh-tylina-native@latest`。
 当前验证环境：Harness `0.1.2-rc.1`、Node.js 22.19+ 或 24、pnpm 11.9。
 新装或更新后，重新启动正在运行的 Harness。
+用 `dsh plugin --profile web list dsh-tylina --depth 0` 核对实际安装版本；原生版将包名换成 `dsh-tylina-native`。
 
 如果没有升级到刚发布的版本，可能是 [pnpm 11](https://github.com/pnpm/pnpm.io/blob/main/blog/releases/11.0.md)
-的发布时间限制尚未解除。可以稍后再试，或使用对应 [Release](https://github.com/tylina/dsh-tylina/releases) 中的指定版本更新命令。
+的发布时间限制尚未解除；“Already up to date” 仍可能表示旧版。
+可以稍后再试，或使用对应 [Release](https://github.com/tylina/dsh-tylina/releases) 中的指定版本更新命令。
 
 </details>
 

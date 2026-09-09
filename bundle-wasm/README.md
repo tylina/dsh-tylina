@@ -22,6 +22,11 @@ Update:
 dsh plugin --profile web update dsh-tylina@latest
 ```
 
+Restart Harness after updating. Verify the installed version with
+`dsh plugin --profile web list dsh-tylina --depth 0`.
+If pnpm's release-age delay keeps an older version, use the exact command in the
+[latest release](https://github.com/tylina/dsh-tylina/releases/latest).
+
 Open **Tylina**, choose or create a conversation, and open its document project.
 The editor uses Better Sidebar tabs when available, or its own resizable sidebar. You can also open a separate window.
 

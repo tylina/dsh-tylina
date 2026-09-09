@@ -35,7 +35,7 @@ With Better Sidebar installed, Tylina joins its tabs; otherwise it provides its 
 <details>
 <summary><strong>Native edition, requirements, and switching</strong></summary>
 
-Choose browser WASM or native compilation on the Harness host. The next Native runtime update is still being validated; see [Releases](https://github.com/tylina/dsh-tylina/releases) for each edition’s available features and release notes.
+Choose browser WASM or native compilation on the Harness host. Both editions follow the current session and load workspace files on demand; see [Releases](https://github.com/tylina/dsh-tylina/releases) for updates.
 
 | Package | Compilation runs in | Choose it for |
 | --- | --- | --- |

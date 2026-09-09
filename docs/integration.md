@@ -61,11 +61,11 @@ Each native runtime manifest restricts installation to its actual OS and archite
 Install **one** variant into an existing Web profile:
 
 ```sh
-dsh plugin --profile web add /absolute/path/dsh-tylina-0.4.9.tgz
+dsh plugin --profile web add dsh-tylina
 dsh --profile web
 ```
 
-For native compilation, install `dsh-tylina-native-0.4.4.tgz` instead.
+For native compilation, install `dsh-tylina-native` instead. Local candidates can be installed by tarball path.
 Remove the previous variant with `dsh plugin --profile web remove dsh-tylina` before switching.
 The bundles use the same `tylina` configuration row and must not be stacked together.
 Custom profiles must contain `@deepseek-ai/dsh-base` and `@deepseek-ai/dsh-web-app` before the Tylina bundle.
@@ -205,10 +205,9 @@ The public package names are `dsh-tylina` and `dsh-tylina-native`; `plugin/` is 
 implementation shared by the two bundles. Both publish only compiled output and bundled resources,
 with repository metadata, a public access setting and no runtime workspace dependencies.
 The source workspace shares one candidate version. Run `pnpm release:version <version>` to update
-all four manifests together. Build and packaging reject mismatched candidate versions. Publication
-can be staged: 0.4.9 ships the WASM bundle first; the native bundle remains unpublished until its
-matching cross-platform runtimes are ready. The published native version is still 0.4.4. Update
-the native runtime dependencies before publishing that candidate. SDK, assets and platform binaries
+all four manifests together. Build and packaging reject mismatched candidate versions. Publish Native
+only after its matching cross-platform runtimes are available, and update those exact dependencies
+before publishing the bundle. SDK, assets and platform binaries
 keep independent versions, and release notes must identify which bundles are actually available.
 
 `pnpm pack:bundles` and `pnpm verify:packages` are the release gate before publishing a tarball.
@@ -226,7 +225,7 @@ Publishing preserves that existing license; it does not change the core source v
 ## Native runtime distribution
 
 The native bundle installs the matching runtime as an optional npm dependency. Windows x64 uses
-`npm:@orangex4/tylina-native-win32-x64@0.4.1` under the usual `tylina-native-win32-x64` dependency name.
+the `@orangex4/tylina-native-win32-x64` npm alias under the usual `tylina-native-win32-x64` dependency name.
 All six platforms use npm registry packages and retain pnpm's default subdependency checks.
 Optional dependencies must remain enabled; no source checkout or Rust toolchain is required.
 

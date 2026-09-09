@@ -36,7 +36,7 @@ WASM 在展开文件夹时读取目录项，仅加载所需文件和真实编译
 <details>
 <summary><strong>原生版、环境要求与切换方式</strong></summary>
 
-可以选择浏览器 WASM 或 Harness 主机上的原生编译。下一次 Native 运行时更新仍在验证中；各版本可用能力和更新内容见 [Releases](https://github.com/tylina/dsh-tylina/releases)。
+可以选择浏览器 WASM 或 Harness 主机上的原生编译。两种版本都会跟随当前会话，按需读取工作区文件；更新内容见 [Releases](https://github.com/tylina/dsh-tylina/releases)。
 
 | 包 | 编译在哪里运行 | 适合 |
 | --- | --- | --- |

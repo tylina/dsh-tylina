@@ -22,8 +22,8 @@ importers:
         specifier: 7.0.6
         version: 7.0.6
       tylina-web-assets:
-        specifier: 0.4.9
-        version: 0.4.9
+        specifier: 0.4.10
+        version: 0.4.10
 
   bundle-native:
     dependencies:
@@ -43,8 +43,8 @@ importers:
         specifier: ^0.18.0
         version: 0.18.0(dafc22554809c366964d5771706df681)
       tylina-web-assets:
-        specifier: 0.4.9
-        version: 0.4.9
+        specifier: 0.4.10
+        version: 0.4.10
       ws:
         specifier: ^8.18.3
         version: 8.21.3
@@ -60,23 +60,23 @@ importers:
         version: 6.0.3
     optionalDependencies:
       tylina-native-darwin-arm64:
-        specifier: 0.4.1
-        version: 0.4.1
+        specifier: 0.4.3
+        version: 0.4.3
       tylina-native-darwin-x64:
-        specifier: 0.4.1
-        version: 0.4.1
+        specifier: 0.4.3
+        version: 0.4.3
       tylina-native-linux-arm64:
-        specifier: 0.4.1
-        version: 0.4.1
+        specifier: 0.4.3
+        version: 0.4.3
       tylina-native-linux-x64:
-        specifier: 0.4.1
-        version: 0.4.1
+        specifier: 0.4.3
+        version: 0.4.3
       tylina-native-win32-arm64:
-        specifier: 0.4.1
-        version: 0.4.1
+        specifier: 0.4.3
+        version: 0.4.3
       tylina-native-win32-x64:
-        specifier: npm:@orangex4/tylina-native-win32-x64@0.4.1
-        version: '@orangex4/tylina-native-win32-x64@0.4.1'
+        specifier: npm:@orangex4/tylina-native-win32-x64@0.4.3
+        version: '@orangex4/tylina-native-win32-x64@0.4.3'
 
   bundle-wasm:
     dependencies:
@@ -96,8 +96,8 @@ importers:
         specifier: ^0.18.0
         version: 0.18.0(dafc22554809c366964d5771706df681)
       tylina-web-assets:
-        specifier: 0.4.9
-        version: 0.4.9
+        specifier: 0.4.10
+        version: 0.4.10
       ws:
         specifier: ^8.18.3
         version: 8.21.3
@@ -212,11 +212,11 @@ importers:
         specifier: 18.3.1
         version: 18.3.1(react@18.3.1)
       tylina-sdk:
-        specifier: 0.4.3
-        version: 0.4.3
+        specifier: 0.4.4
+        version: 0.4.4
       tylina-web-assets:
-        specifier: 0.4.6
-        version: 0.4.6
+        specifier: 0.4.10
+        version: 0.4.10
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -1207,8 +1207,8 @@ packages:
     resolution: {integrity: sha512-YhHWdHfpFMQfd0prsEnxKeS3Qz3ytIGmsS0sth4KDjnacIT7hxk6hXHkJ9KysxlkvTM+WZAtQbbcUhdoP4Hvtw==}
     engines: {node: '>=20'}
 
-  '@orangex4/tylina-native-win32-x64@0.4.1':
-    resolution: {integrity: sha512-E7zGKcQaoB4rrHdM4TfP7T7eWx1QF7cOwY9JwE/JR++mi7+qvBOXURvIABOTXqUDPE54uGn1DsZVF2JjA0YXlQ==}
+  '@orangex4/tylina-native-win32-x64@0.4.3':
+    resolution: {integrity: sha512-/t4PdhdWUz4yNJknHqVNoaaYHuauh7H3cMdgPq8/tjBqSVldiqz8/Jthu+ftSGsNs0UsoANQJj9tnJ29QxFzKg==}
     cpu: [x64]
     os: [win32]
 
@@ -2126,42 +2126,39 @@ packages:
   tylina-font-assets-9@0.4.1:
     resolution: {integrity: sha512-Yvclj2dQT6jLbU+F2mef5L+5q93uGxOFtq8yZlgeKDtXAbN6FNLk9wrwUmF1i+G0vRtVWrV57vavJqSv998V7g==}
 
-  tylina-native-darwin-arm64@0.4.1:
-    resolution: {integrity: sha512-r9bmR8m5YY7KlyDDEkqVuqHHYP9z8A7U2SD8/WEtxafAvzY8NC2+P+pLuCE1l4mlSu/vREwUdVGZ7UsLWlvYRw==}
+  tylina-native-darwin-arm64@0.4.3:
+    resolution: {integrity: sha512-lESxA53hONpM1ApmXVPUBtNtbyHG6NpyR5WOjQybAnyYTgdTBUgZT5tM9hDq5Kn02CcPU+btW7hqPuc70aWEOw==}
     cpu: [arm64]
     os: [darwin]
 
-  tylina-native-darwin-x64@0.4.1:
-    resolution: {integrity: sha512-TxuYglmMdjmzZ7KHYs90M8CDBwtK9YM/TitUdytj2ctHUHEemt8PYOyPpP0QJDkIl8T88qZiHibi2y2Ba23nhQ==}
+  tylina-native-darwin-x64@0.4.3:
+    resolution: {integrity: sha512-57e3k0HxWz8k5aFq9ep4nBizDESuqt87rL5YzxB7NJBJgJb4SeYyzUjEZShXSxeuQGCkGSWTmCkH0FTJkDI8UA==}
     cpu: [x64]
     os: [darwin]
 
-  tylina-native-linux-arm64@0.4.1:
-    resolution: {integrity: sha512-dIHrVO+ipXsxckiEv929R1RN6DKCjzscYzXf/tx0XTP+Bqp6weexWQ6+NZN4+DHdAzrGNblOXECDeMZEIhOTpQ==}
+  tylina-native-linux-arm64@0.4.3:
+    resolution: {integrity: sha512-32S9VX0C+TMzjn91iczYuwfTZVdgPNMqVVdnzV477bvX1vhHQ4cNPabC6IzdRiV3OMady6W6QmKWL9um12vwnQ==}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
-  tylina-native-linux-x64@0.4.1:
-    resolution: {integrity: sha512-ha2K4yH8SVTEvqA+UeSwwDZkLrzM8xZJ8r6HWnlBwdHtt7niJxS5tjVNkRKoeUbQ82q6ThuRca+hmQFwzEK8Hg==}
+  tylina-native-linux-x64@0.4.3:
+    resolution: {integrity: sha512-GPaQJ0FMUl483onkBFMBqaCl196rECdpvhDqhYAfzwO4kIEDtlg+SfF0Z2Yrut0pJ03F3LZfwPov5quPmOy23Q==}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
 
-  tylina-native-win32-arm64@0.4.1:
-    resolution: {integrity: sha512-VQa0/kVCvmrvchHDQAT5FgEhMAH57CEryFpX6KTaATNaJMTp1JaRj2rbf78ASqrhN3nYdYtN0NT5RlcZ0ya+rQ==}
+  tylina-native-win32-arm64@0.4.3:
+    resolution: {integrity: sha512-MnOOLyPtxX0IZB1/j44hTJA9qhiRDTkXBlD4ZZAvOiqKpFEn2AgszaL+uGZh7+qYwmRL3Rf9Fo/zYUvPsBAnHA==}
     cpu: [arm64]
     os: [win32]
 
-  tylina-sdk@0.4.3:
-    resolution: {integrity: sha512-vtzGuzb9/+by3RuElSAgl2EI3IdiLmk7L1QYpQWdT2cBx/dIGZyXepmWwQZGOH2AQFTz2dfuJvnOQubqvv5Z4Q==}
+  tylina-sdk@0.4.4:
+    resolution: {integrity: sha512-8XJ6ko2R+vS+fLcji4ogPwiNa9VMvku08woPBjye8t/ygXqXn2gVnlKfW9lAam5Z28YbsNsJKQB4LeYrZkaYTg==}
     hasBin: true
 
-  tylina-web-assets@0.4.6:
-    resolution: {integrity: sha512-o5VEjCDA1jtYebT6/VdUsuF2v6fyUn6rQUH8sw/u9e8DapGwdIg9DXIcU8MazKvliWSO11itXFM4mXVVI0HREg==}
-
-  tylina-web-assets@0.4.9:
-    resolution: {integrity: sha512-grwS0CIkhqNtsxgY6QzTUzBbhTAt7spYwNr1gn3H6fQ0QUrsBmUqX6+qxC5qjbQ3MdeEZffMkvdWAfP+Hol4uQ==}
+  tylina-web-assets@0.4.10:
+    resolution: {integrity: sha512-RSCGx+IcGojQrkKKQOWMLWtfImN8I0u9TyjVRhyFBO15pgvEJEget7k/iVQ0P0RfKkM9v4jUFaklinPLJw+Bfw==}
 
   typescript@6.0.3:
     resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
@@ -3293,7 +3290,7 @@ snapshots:
       '@modelcontextprotocol/core': 2.0.0
       zod: 4.4.3
 
-  '@orangex4/tylina-native-win32-x64@0.4.1':
+  '@orangex4/tylina-native-win32-x64@0.4.3':
     optional: true
 
   '@playwright/test@1.63.0':
@@ -4501,42 +4498,27 @@ snapshots:
 
   tylina-font-assets-9@0.4.1: {}
 
-  tylina-native-darwin-arm64@0.4.1:
+  tylina-native-darwin-arm64@0.4.3:
     optional: true
 
-  tylina-native-darwin-x64@0.4.1:
+  tylina-native-darwin-x64@0.4.3:
     optional: true
 
-  tylina-native-linux-arm64@0.4.1:
+  tylina-native-linux-arm64@0.4.3:
     optional: true
 
-  tylina-native-linux-x64@0.4.1:
+  tylina-native-linux-x64@0.4.3:
     optional: true
 
-  tylina-native-win32-arm64@0.4.1:
+  tylina-native-win32-arm64@0.4.3:
     optional: true
 
-  tylina-sdk@0.4.3:
+  tylina-sdk@0.4.4:
     dependencies:
       cross-spawn: 7.0.6
       zod: 4.4.3
 
-  tylina-web-assets@0.4.6:
-    dependencies:
-      tylina-font-assets-1: 0.4.1
-      tylina-font-assets-10: 0.4.1
-      tylina-font-assets-11: 0.4.1
-      tylina-font-assets-12: 0.4.1
-      tylina-font-assets-2: 0.4.1
-      tylina-font-assets-3: 0.4.1
-      tylina-font-assets-4: 0.4.1
-      tylina-font-assets-5: 0.4.1
-      tylina-font-assets-6: 0.4.1
-      tylina-font-assets-7: 0.4.1
-      tylina-font-assets-8: 0.4.1
-      tylina-font-assets-9: 0.4.1
-
-  tylina-web-assets@0.4.9:
+  tylina-web-assets@0.4.10:
     dependencies:
       tylina-font-assets-1: 0.4.1
       tylina-font-assets-10: 0.4.1

@@ -20,7 +20,13 @@ import { verifyLiveModel } from './dsh-live-model.mjs'
 const root = fileURLToPath(new URL('../', import.meta.url))
 const require = createRequire(join(root, 'package.json'))
 const { chromium, expect } = require('@playwright/test')
-const run = promisify(execFile)
+const run = (...args) => {
+  const result = promisify(execFile)(...args)
+  // These commands are noninteractive. Let installers observe EOF instead of
+  // keeping their input listener alive after they finish installing dependencies.
+  result.child.stdin?.end()
+  return result
+}
 const betterSidebar = process.env.TYLINA_DSH_BETTER_SIDEBAR === '1'
 const modes = process.argv.slice(2).length ? process.argv.slice(2) : ['wasm', 'native']
 const installOptions = process.env.TYLINA_DSH_OFFLINE === '1' ? ['--offline'] : []
@@ -81,7 +87,11 @@ for (const mode of modes) {
     exports: './index.mjs', dsh: { bundle: { patch: './cordis.patch.yml' } } }))
   await writeFile(join(probe, 'cordis.patch.yml'), '- insert:\n    - id: tylina-acceptance\n      name: tylina-acceptance-probe\n')
   await run('pnpm', ['pack', '--pack-destination', home], { cwd: probe, env, maxBuffer: 2 ** 20 })
-  await run('dsh', ['plugin', '--profile', 'tylina', 'add', join(home, 'tylina-acceptance-probe-1.0.0.tgz'), ...installOptions], { env, maxBuffer: 2 ** 20 })
+  // The product bundle above goes through the real DSH installer. The test-only
+  // probe is registered below; install its dependency directly with closed stdin.
+  await run('pnpm', ['add', join(home, 'tylina-acceptance-probe-1.0.0.tgz'), ...installOptions], {
+    cwd: join(home, 'profiles/tylina'), env, maxBuffer: 2 ** 20
+  })
   const profile = join(home, 'profiles/tylina/package.json')
   const manifest = JSON.parse(await readFile(profile, 'utf8'))
   manifest.dsh.profile.bundles = ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app', packageName, 'tylina-acceptance-probe', ...(betterSidebar ? ['dsh-better-sidebar'] : [])]

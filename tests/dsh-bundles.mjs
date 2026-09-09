@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 
 import { verifyDock } from './dsh-dock.mjs'
-import { verifyBetterSidebar } from './dsh-better-sidebar.mjs'
+import { expectPersistedDocumentTab, verifyBetterSidebar } from './dsh-better-sidebar.mjs'
 import { verifySessionFollowing } from './dsh-session-follow.mjs'
 import { verifyInstalledMcp } from './dsh-mcp-installed.mjs'
 import { verifyWindowRecovery } from './dsh-window-recovery.mjs'
@@ -283,6 +283,7 @@ for (const mode of modes) {
     await page.screenshot({ path: join(root, `.benchmarks/dsh-${mode}.png`) })
     await (betterSidebar ? verifyBetterSidebar : verifyDock)({ page, frame, iframe, context, root, mode, readMain, probeRequest, expect, external, menu })
     await verifySessionFollowing({ page, frame, home, probeRequest, readMain, external, expect })
+    if (betterSidebar) await expectPersistedDocumentTab({ page, sessionId, expect })
     await page.reload()
     const setup = page.getByRole('button', { name: /^(稍后配置|Set up later|Configure later)$/u })
     const launcher = page.getByRole('button', { name: /^(打开 Tylina|Open Tylina)$/u })
@@ -298,7 +299,9 @@ for (const mode of modes) {
       }).toBe(0)
     }
     // Better Sidebar restores its open tab on reload; the ordinary dock starts closed.
-    if (await launcher.getAttribute('aria-expanded') !== 'true') await launcher.click()
+    // A precheck followed by a toggle can close the tab while restoration completes.
+    if (betterSidebar) await expect(launcher).toHaveAttribute('aria-expanded', 'true')
+    else await launcher.click()
     await expect.poll(readMain).toBe(external)
     await expect(frame.locator('.typst-doc')).toBeVisible()
     await expect(frame.locator('.web-document-title')).toHaveText('project')

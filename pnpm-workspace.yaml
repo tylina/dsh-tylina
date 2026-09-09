@@ -41,3 +41,4 @@ minimumReleaseAgeExclude:
   - tylina-native-win32-arm64@0.4.1
   - tylina-native-darwin-x64@0.4.1
   - '@orangex4/tylina-native-win32-x64@0.4.1'
+  - tylina-web-assets@0.4.9

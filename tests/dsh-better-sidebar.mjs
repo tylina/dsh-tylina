@@ -1,6 +1,19 @@
 import assert from 'node:assert/strict'
 import { join } from 'node:path'
 
+/** Wait for the installed host's debounced layout write before testing restoration. */
+export async function expectPersistedDocumentTab({ page, sessionId, expect }) {
+  await expect.poll(() => page.evaluate((sessionId) => {
+    const raw = localStorage.getItem(`dsh-sidebar:v1:${sessionId}`)
+    if (!raw) return false
+    const state = JSON.parse(raw)
+    const activeDocument = (node) => node?.kind === 'leaf'
+      ? node.tabs.some((tab) => tab.id === node.active && tab.type === 'dsh-tylina:document')
+      : node?.children?.some(activeDocument) ?? false
+    return state.panelOpen && activeDocument(state.splits)
+  }, sessionId)).toBe(true)
+}
+
 /** Real installed Better Sidebar, not a substitute service. */
 export async function verifyBetterSidebar({ page, frame, iframe, root, mode, expect, readMain, external, menu }) {
   await expect(page.locator('.tylina-dsh-panel')).toHaveClass(/tylina-dsh-panel-embedded/u)

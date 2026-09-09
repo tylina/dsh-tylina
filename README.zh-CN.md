@@ -17,7 +17,7 @@
 已有 DeepSeek Harness？安装浏览器 WASM 版：
 
 ```sh
-dsh plugin --profile web add dsh-tylina@0.4.10
+dsh plugin --profile web add dsh-tylina@0.4.11
 dsh web
 ```
 
@@ -27,7 +27,7 @@ dsh web
 dsh plugin --profile web update dsh-tylina@latest
 ```
 
-刚发布的版本可用 `dsh plugin --profile web update dsh-tylina@0.4.10` 明确升级。
+刚发布的版本可用 `dsh plugin --profile web update dsh-tylina@0.4.11` 明确升级。
 [pnpm 11](https://github.com/pnpm/pnpm.io/blob/main/blog/releases/11.0.md) 默认可能延后一天采用 `latest` 新版本。
 
 
@@ -40,7 +40,7 @@ WASM 在展开文件夹时读取目录项，仅加载所需文件和真实编译
 <details>
 <summary><strong>原生版、环境要求与切换方式</strong></summary>
 
-WASM 版已更新到 **0.4.10**；原生正式版暂为 **0.4.4**，配套平台更新完成验证后再发布。可以选择浏览器 WASM 或 Harness 主机上的原生编译。
+WASM 版已更新到 **0.4.11**；原生正式版暂为 **0.4.4**，配套平台更新完成验证后再发布。可以选择浏览器 WASM 或 Harness 主机上的原生编译。
 
 | 包 | 编译在哪里运行 | 适合 |
 | --- | --- | --- |

@@ -17,7 +17,7 @@ Edit typeset Typst documents inside DeepSeek Harness. Share a workspace with you
 Already using DeepSeek Harness? Install the browser WASM edition:
 
 ```sh
-dsh plugin --profile web add dsh-tylina@0.4.10
+dsh plugin --profile web add dsh-tylina@0.4.11
 dsh web
 ```
 
@@ -27,7 +27,7 @@ Update:
 dsh plugin --profile web update dsh-tylina@latest
 ```
 
-For a newly published release, use `dsh plugin --profile web update dsh-tylina@0.4.10`.
+For a newly published release, use `dsh plugin --profile web update dsh-tylina@0.4.11`.
 [pnpm 11](https://github.com/pnpm/pnpm.io/blob/main/blog/releases/11.0.md) may defer `latest` updates for one day.
 
 
@@ -39,7 +39,7 @@ With Better Sidebar installed, Tylina joins its tabs; otherwise it provides its 
 <details>
 <summary><strong>Native edition, requirements, and switching</strong></summary>
 
-The browser edition is **0.4.10**; the published native edition remains **0.4.4** while its matching platform update is being validated. Choose browser WASM or native compilation on the Harness host.
+The browser edition is **0.4.11**; the published native edition remains **0.4.4** while its matching platform update is being validated. Choose browser WASM or native compilation on the Harness host.
 
 | Package | Compilation runs in | Choose it for |
 | --- | --- | --- |

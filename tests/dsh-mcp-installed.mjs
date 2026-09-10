@@ -1,3 +1,4 @@
+import { verifyEditAnimation } from './edit-animation.mjs'
 import { readEditorSource } from './dsh-source.mjs'
 import { commandInput } from './command-input.mjs'
 import assert from 'node:assert/strict'
@@ -78,6 +79,11 @@ export async function verifyInstalledMcp({ page, frame, root, project, readMain,
     assert.match(await readFile(join(info.skillsRoot, 'typst-slides/SKILL.md'), 'utf8'), /Typst/)
     const templates = await call('tylina_list_templates', { query: 'amber', limit: 10 })
     assert.ok(templates.structuredContent.templates.some((entry) => entry.spec.startsWith('tylina:slides/')))
+    await verifyEditAnimation({ frame, expect,
+      call: (command, args) => client.callTool({ name: 'tylina', arguments: { command, args } }),
+      writeSource: (text) => writeFile(join(project, 'Plugin.typ'), text),
+      screenshot: (view) => page.screenshot({ path: join(root, `.benchmarks/dsh-${mode}-animation-${view}.png`) })
+    })
     await writeFile(join(project, 'Plugin.typ'), original)
     await expect.poll(async () => (await readEditorSource(page, probe)).text).toBe(original)
     await expect.poll(readMain).toBe(original)

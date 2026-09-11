@@ -1,6 +1,6 @@
 {
   "name": "@tylina/dsh-workspace",
-  "version": "0.4.21",
+  "version": "0.4.22",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.9.0",
@@ -23,6 +23,6 @@
     "@modelcontextprotocol/client": "2.0.0",
     "@playwright/test": "1.63.0",
     "cross-spawn": "7.0.6",
-    "tylina-web-assets": "0.4.19"
+    "tylina-web-assets": "0.4.21"
   }
 }

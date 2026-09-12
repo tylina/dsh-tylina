@@ -13,9 +13,10 @@ if (version === '--check') {
     assert.equal(value.version, manifests[0].value.version, `${value.name}: run pnpm release:version <version>`)
   }
 } else {
-  assert.match(version ?? '', /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/, 'Provide a stable version, for example 0.4.4')
+  assert.match(version ?? '', /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-alpha\.([1-9]\d*))?$/, 'Provide a synchronized Tylina version, for example 0.15.0-alpha.1')
   for (const { path, value } of manifests) {
     value.version = version
+    if (value.publishConfig) value.publishConfig.tag = version.includes('-alpha.') ? 'alpha' : 'latest'
     await writeFile(path, JSON.stringify(value, null, 2) + '\n')
   }
 }

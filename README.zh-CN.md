@@ -10,6 +10,7 @@
 
 - **直接编辑成品**：点击排版后的页面写作；需要精细控制时，切换 Split 或打开 Source Lens。
 - **与你的 Agent 一起创作**：共用会话工作区，提供文档工具、Typst Skills 和 MCP；模型与对话由 Harness 管理。
+- **导入参考资料**：把 PDF、DOCX、PPTX 或 XLSX 转为可审阅的 Markdown；扫描 PDF 经确认后在本地 OCR，不依赖 Python。
 - **从模板到交付**：模板库、字体、Slides Mode、演讲者模式与 PDF 或 PowerPoint 导出，都在同一个编辑器里。
 
 ## 安装与更新
@@ -80,6 +81,8 @@ dsh plugin --profile web add dsh-tylina-native
 > 根据这个工作区里的论文，做一份 10 页学术报告。保留引用，添加演讲备注，检查版面后导出可编辑的 PowerPoint。
 
 > 把我的经历整理成一页简历；用清晰的层级突出项目成果。
+
+> 把 `references/report.pdf` 导入为新的 Markdown 资料文件，先告诉我提取警告，再把核实过的内容用于报告。
 
 文档保存为标准 `.typ` 源码与资源，可继续本地编辑。模型请求由你配置的 Harness 提供商处理；
 Tylina 不要求账号，也不提供中转模型服务器。

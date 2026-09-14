@@ -17,7 +17,7 @@ export function createSessionBinder(workspaces: ReturnType<typeof createHarnessW
     const connected = `Tylina is connected to this session's document project at ${path}. ` +
       'Use the Harness file tools with this project path. ' +
       'This current Tylina contract supersedes earlier Tylina instructions and connection notices. ' +
-      'Tylina provides editor selection, compilation, preview and export. ' +
+      'Tylina provides editor selection, binary-safe file metadata, document import, compilation, preview and export. ' +
       'Other filesystem tools and scripts use the Harness working directory and their edits arrive as external changes. ' +
       'Do not infer that a disconnected tool completed or retry an uncertain write without inspecting the current document.'
     signal.throwIfAborted()

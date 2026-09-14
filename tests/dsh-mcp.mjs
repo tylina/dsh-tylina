@@ -68,17 +68,38 @@ test(`${mode}: real HTTP MCP discovers the shared tools, instructions and images
     const { tools } = await client.listTools()
     assert.equal(tools.length, 1)
     assert.equal(tools[0].name, 'tylina')
+    const catalog = await client.callTool({ name: 'tylina', arguments: { command: 'help' } })
+    const commands = catalog.structuredContent.commands.map(({ command }) => command)
     const help = await client.callTool({ name: 'tylina', arguments: { command: 'help', args: { command: 'document.setMain' } } })
     assert.ok(help.structuredContent.inputSchema.required.includes('file'))
+    let expectedCalls = 0
+    if (commands.includes('document.import')) {
+      assert.ok(commands.includes('file.read'), 'matching SDKs must expose binary-safe metadata with import')
+      const readHelp = await client.callTool({ name: 'tylina', arguments: { command: 'help', args: { command: 'file.read' } } })
+      assert.ok(readHelp.structuredContent.inputSchema.required.includes('file'))
+      const binary = await client.callTool({ name: 'tylina', arguments: { command: 'file.read', args: { file: 'source.pdf' } } })
+      assert.equal(binary.structuredContent.project, 'bound-project')
+      const importHelp = await client.callTool({ name: 'tylina', arguments: { command: 'help', args: { command: 'document.import' } } })
+      assert.ok(!importHelp.structuredContent.inputSchema.required.includes('expectedSourceSha256'))
+      const imported = await client.callTool({ name: 'tylina', arguments: { command: 'document.import', args: {
+        source: 'source.pdf', destination: 'source.md', expectedDestinationSha256: null
+      } } })
+      assert.equal(imported.structuredContent.project, 'bound-project')
+      assert.deepEqual(calls.at(-1), { name: 'tylina_import_document', input: {
+        source: 'source.pdf', destination: 'source.md', expectedDestinationSha256: null, allowIncomplete: false
+      } })
+      expectedCalls += 2
+    }
     const result = await client.callTool({ name: 'tylina_render_page', arguments: { page: 1 } })
     assert.equal(result.structuredContent.project, 'bound-project')
     assert.equal(result.content[1].mimeType, 'image/png')
-    assert.equal(calls.length, 1)
+    expectedCalls++
+    assert.equal(calls.length, expectedCalls)
     const invalid = await client.callTool({ name: 'tylina_write_file', arguments: { file: 'main.typ' } })
     assert.equal(invalid.isError, true)
-    assert.equal(calls.length, 1, 'invalid mutations are rejected before reaching the editor')
+    assert.equal(calls.length, expectedCalls, 'invalid mutations are rejected before reaching the editor')
     await assert.rejects(client.callTool({ name: 'not-a-tylina-tool', arguments: {} }), /not found/)
-    assert.equal(calls.length, 1)
+    assert.equal(calls.length, expectedCalls)
     await bound.dispose()
     assert.equal((await fetch(address, { method: 'POST', headers })).status, 404)
     const next = env.host.open(async () => { throw new Error('Old clients cannot reach this project') }, '', new AbortController().signal)

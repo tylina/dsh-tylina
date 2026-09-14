@@ -105,8 +105,9 @@ Every editor connection owns independent preview, command and language-service s
 Disposing the editor destroys its native sessions. A tool socket disconnect rejects pending calls while preserving
 the document; “Reconnect Agent tools” explicitly restores tool registration without replaying previous calls.
 
-The bound Agent receives one shared `tylina` command tool. `help` discovers operations and their schemas, including current unsaved file reads, version-checked writes,
-Typst validation, semantic document queries, templates, Skills and actual rendered image attachments.
+The bound Agent receives one shared `tylina` command tool. `help` discovers operations and their schemas, including
+binary-safe file metadata, current unsaved context, document import, Typst validation, semantic document queries,
+templates, Skills and actual rendered image attachments. Regular source edits remain owned by Harness file tools.
 The ordinary Harness Agent owns model configuration, keys and chat. Tylina registers its current authoring contract
 and project as one session-scoped Harness runtime context. Harness snapshots it on the next user turn, only when
 changed, and restores it after compaction. Reopening or reconnecting does not enqueue connection notices or start
@@ -117,6 +118,9 @@ the project and Skill roots. Use the Harness file/Skill tools to read them and i
 `document.export` writes PDF, paged PNG or SVG, a visual-fidelity PPTX, or an experimental editable PPTX.
 The two PPTX modes preserve presenter notes and publish one exact destination file; they use the same compiled
 document model in the browser WASM and native bundles.
+`document.import` captures a hash-bound PDF, DOCX, PPTX or XLSX workspace file as conservative Markdown.
+The first hashless call returns binary metadata without parsing or writing. Scanned PDF pages require an explicit
+local OCR language policy or an explicit incomplete-output choice; both bundles use the same pinned Web assets.
 Before a document tool executes, the editor receives pending filesystem changes, so validation and export
 observe the source just edited by the Harness. A refresh conflict is reported rather than validating old text.
 

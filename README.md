@@ -10,6 +10,7 @@ Edit typeset Typst documents inside DeepSeek Harness. Share a workspace with you
 
 - **Edit the finished page.** Click and write on the typeset document; use Split or Source Lens for precise source control.
 - **Create with your agent.** Share the conversation's workspace, document tools, Typst Skills, and MCP. Harness owns the model and chat.
+- **Bring in source material.** Import PDF, DOCX, PPTX, or XLSX evidence into reviewable Markdown. Scanned PDFs use explicit local OCR without Python.
 - **Go from template to delivery.** Templates, fonts, Slides Mode, presenter view, and PDF or PowerPoint export are part of the same editor.
 
 ## Install & update
@@ -79,6 +80,8 @@ Start with a template, then shape it through conversation and direct editing. Th
 > Turn the paper in this workspace into a 10-slide research talk. Keep the citations, add speaker notes, review the layout, and export an editable PowerPoint.
 
 > Turn my experience into a one-page résumé with a clear hierarchy and an emphasis on project outcomes.
+
+> Import `references/report.pdf` into a new Markdown evidence file, show me any extraction warnings, then use the verified material in the report.
 
 Documents remain standard `.typ` source and resources that you can edit locally. Model requests use your configured
 Harness provider. Tylina requires no account and adds no model proxy server.

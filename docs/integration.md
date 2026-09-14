@@ -114,6 +114,9 @@ inference. The current contract supersedes historical tool descriptions after an
 Tool registration is session scoped and exclusively owned by one editor.
 Both bundles expose the complete Desktop Skill scripts in the Harness filesystem. `workspace.info` supplies
 the project and Skill roots. Use the Harness file/Skill tools to read them and its process tools to run scripts.
+`document.export` writes PDF, paged PNG or SVG, a visual-fidelity PPTX, or an experimental editable PPTX.
+The two PPTX modes preserve presenter notes and publish one exact destination file; they use the same compiled
+document model in the browser WASM and native bundles.
 Before a document tool executes, the editor receives pending filesystem changes, so validation and export
 observe the source just edited by the Harness. A refresh conflict is reported rather than validating old text.
 
@@ -154,7 +157,7 @@ This installs the tarballs into isolated profiles, launches the real Harness, an
 It verifies authentication, actual project and Agent instances, compilation and formatting, CRLF preservation,
 Source input, disk saves, external edits and exact Undo/Redo, hidden-editor image attachments, real system uv,
 pending instructions, reload and native process cleanup. A deterministic streaming model adapter then drives
-the actual Agent loop through reading, editing, validation, PDF export to the project and image rendering.
+the actual Agent loop through reading, editing, validation, export to the project and image rendering.
 The next model request must receive each real tool result. The suite replaces the actual Session message surface
 as compaction does and repeats the turn, verifying that authoring instructions remain present exactly once.
 The model fixture and authenticated test probe are not distributed. No model API key or live provider inference

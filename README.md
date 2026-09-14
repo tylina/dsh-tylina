@@ -4,13 +4,13 @@
 <p align="center"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
 <p align="center"><a href="https://tylina.github.io/">Website</a> · <a href="https://tylina.github.io/app/">Try the Web editor</a> · <a href="#install--update">Install</a></p>
 
-Edit typeset Typst documents inside DeepSeek Harness. Share a workspace with your agent, from first draft to finished PDF.
+Edit typeset Typst documents inside DeepSeek Harness. Share a workspace with your agent, from first draft to PDF or PowerPoint delivery.
 
 ![An academic presentation open beside the DeepSeek Harness conversation](docs/media/harness-slides.png)
 
 - **Edit the finished page.** Click and write on the typeset document; use Split or Source Lens for precise source control.
 - **Create with your agent.** Share the conversation's workspace, document tools, Typst Skills, and MCP. Harness owns the model and chat.
-- **Go from template to delivery.** Templates, fonts, Slides Mode, presenter view, and PDF export are part of the same editor.
+- **Go from template to delivery.** Templates, fonts, Slides Mode, presenter view, and PDF or PowerPoint export are part of the same editor.
 
 ## Install & update
 
@@ -76,7 +76,7 @@ Start with a template, then shape it through conversation and direct editing. Th
 
 ## Try asking your agent
 
-> Turn the paper in this workspace into a 10-slide research talk. Keep the citations, add speaker notes, review the layout, and export a PDF.
+> Turn the paper in this workspace into a 10-slide research talk. Keep the citations, add speaker notes, review the layout, and export an editable PowerPoint.
 
 > Turn my experience into a one-page résumé with a clear hierarchy and an emphasis on project outcomes.
 

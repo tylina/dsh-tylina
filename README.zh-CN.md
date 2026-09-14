@@ -4,13 +4,13 @@
 <p align="center"><a href="README.md">English</a> · <strong>简体中文</strong></p>
 <p align="center"><a href="https://tylina.github.io/">官网</a> · <a href="https://tylina.github.io/app/">体验 Web 版</a> · <a href="#安装与更新">安装</a></p>
 
-在 DeepSeek Harness 中直接编辑排版后的 Typst 文档。与 Agent 共用工作区，从初稿、设计到 PDF 交付。
+在 DeepSeek Harness 中直接编辑排版后的 Typst 文档。与 Agent 共用工作区，从初稿、设计到 PDF 或 PowerPoint 交付。
 
 ![在 DeepSeek Harness 对话右侧编辑学术演示文稿](docs/media/harness-slides.png)
 
 - **直接编辑成品**：点击排版后的页面写作；需要精细控制时，切换 Split 或打开 Source Lens。
 - **与你的 Agent 一起创作**：共用会话工作区，提供文档工具、Typst Skills 和 MCP；模型与对话由 Harness 管理。
-- **从模板到交付**：模板库、字体、Slides Mode、演讲者模式与 PDF 导出，都在同一个编辑器里。
+- **从模板到交付**：模板库、字体、Slides Mode、演讲者模式与 PDF 或 PowerPoint 导出，都在同一个编辑器里。
 
 ## 安装与更新
 
@@ -77,7 +77,7 @@ dsh plugin --profile web add dsh-tylina-native
 
 ## 试着对 Agent 说
 
-> 根据这个工作区里的论文，做一份 10 页学术报告。保留引用，添加演讲备注，检查版面后导出 PDF。
+> 根据这个工作区里的论文，做一份 10 页学术报告。保留引用，添加演讲备注，检查版面后导出可编辑的 PowerPoint。
 
 > 把我的经历整理成一页简历；用清晰的层级突出项目成果。
 

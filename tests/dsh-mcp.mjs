@@ -90,6 +90,38 @@ test(`${mode}: real HTTP MCP discovers the shared tools, instructions and images
       } })
       expectedCalls += 2
     }
+    if (commands.includes('image.search')) {
+      const searchHelp = await client.callTool({ name: 'tylina', arguments: {
+        command: 'help', args: { command: 'image.search' }
+      } })
+      assert.ok(searchHelp.structuredContent.inputSchema.required.includes('query'))
+      assert.ok(!searchHelp.structuredContent.inputSchema.required.includes('licensePolicy'))
+      const searched = await client.callTool({ name: 'tylina', arguments: {
+        command: 'image.search', args: { query: 'research diagram', aspectRatio: 'wide' }
+      } })
+      assert.equal(searched.structuredContent.project, 'bound-project')
+      assert.deepEqual(calls.at(-1), { name: 'tylina_search_images', input: {
+        query: 'research diagram', licensePolicy: 'adaptable', aspectRatio: 'wide', page: 1, limit: 8
+      } })
+      const imported = await client.callTool({ name: 'tylina', arguments: {
+        command: 'image.import', args: {
+          id: '93d7039b-2a78-41d0-b122-423e428e91ce',
+          expectedMetadataSha256: 'a'.repeat(64),
+          licensePolicy: 'adaptable',
+          destination: 'assets/diagram.png',
+          expectedDestinationSha256: null
+        }
+      } })
+      assert.equal(imported.structuredContent.project, 'bound-project')
+      assert.deepEqual(calls.at(-1), { name: 'tylina_import_image', input: {
+        id: '93d7039b-2a78-41d0-b122-423e428e91ce',
+        expectedMetadataSha256: 'a'.repeat(64),
+        licensePolicy: 'adaptable',
+        destination: 'assets/diagram.png',
+        expectedDestinationSha256: null
+      } })
+      expectedCalls += 2
+    }
     const result = await client.callTool({ name: 'tylina_render_page', arguments: { page: 1 } })
     assert.equal(result.structuredContent.project, 'bound-project')
     assert.equal(result.content[1].mimeType, 'image/png')

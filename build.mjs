@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { copyBundledLicenses } from './bundle-licenses.mjs'
 
 const base = dirname(fileURLToPath(import.meta.url))
-const { assetsRoot } = await import('./source.mjs')
+const { assetsRoot, sdkRoot, sdkAliases } = await import('./source.mjs')
 const require = createRequire(join(base, 'plugin/package.json'))
 const { build } = require('esbuild')
 const target = process.argv[2]
@@ -14,6 +14,10 @@ const directory = join(base, `bundle-${target}`)
 const manifest = JSON.parse(await readFile(join(directory, 'package.json'), 'utf8'))
 await mkdir(join(directory, 'dist/licenses'), { recursive: true })
 await cp(join(assetsRoot, 'licenses/tinymist.txt'), join(directory, 'dist/licenses/tinymist.txt'))
+await rm(join(directory, 'dist/licenses/sdk'), { recursive: true, force: true })
+await cp(join(sdkRoot, 'licenses'), join(directory, 'dist/licenses/sdk'), {
+  recursive: true
+})
 for (const [dependency, file] of [['react', 'react.txt'], ['react-dom', 'react-dom.txt'], ['@tabler/icons-react', 'tabler-icons.txt']]) {
   await cp(join(dirname(require.resolve(`${dependency}/package.json`)), 'LICENSE'), join(directory, 'dist/licenses', file))
 }
@@ -21,13 +25,14 @@ const serverBuild = await build({ entryPoints: [join(base, target === 'wasm' ? '
   metafile: true, minify: true, sourcemap: false,
   bundle: true, platform: 'node', format: 'esm', target: 'node22',
   external: ['tylina-web-assets', '@deepseek-ai/cordis', '@deepseek-ai/dsh-skill-filesystem', '@deepseek-ai/dsh-session/types', '@deepseek-ai/dsh-llm/message', 'ws'],
-  alias: { '@tylina/dsh-plugin': join(base, 'plugin/src/index.ts') },
+  alias: { ...sdkAliases, '@tylina/dsh-plugin': join(base, 'plugin/src/index.ts') },
   banner: { js: "import { createRequire as __createRequire } from 'node:module'; const require = __createRequire(import.meta.url);" }
 })
 await copyBundledLicenses(serverBuild.metafile, join(directory, 'dist/licenses'))
 // The Harness module table supplies React; Tylina's editor itself stays in its iframe.
 await build({ entryPoints: [join(base, 'plugin/src/client/index.tsx')], outfile: join(directory, 'dist/client.js'),
   bundle: true, platform: 'browser', format: 'cjs', target: 'es2022', jsx: 'automatic',
+  alias: sdkAliases,
   external: ['react', 'react/jsx-runtime', 'react-dom', '@deepseek-ai/cordis'],
   banner: { js: `window.__ModuleLoader__.load({ id: ${JSON.stringify(manifest.name)}, factory: (require) => { var module = { exports: {} }; var exports = module.exports;` },
   footer: { js: 'return module.exports; } });' }
@@ -39,7 +44,8 @@ await build({ entryPoints: [join(base, 'plugin/src/client/index.tsx')], outfile:
   await mkdir(join(directory, 'dist/web'), { recursive: true })
   await build({ entryPoints: [join(base, 'plugin/src/client/project-window.tsx')],
     outfile: join(directory, 'dist/web/project-window.js'), bundle: true, platform: 'browser', format: 'esm',
-    target: 'es2022', jsx: 'automatic', minify: true, define: { 'process.env.NODE_ENV': '"production"' } })
+    target: 'es2022', jsx: 'automatic', minify: true, alias: sdkAliases,
+    define: { 'process.env.NODE_ENV': '"production"' } })
   await writeFile(join(directory, 'dist/web/project-window.html'), `<!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tylina</title><link rel="icon" href="/tylina/favicon.svg"></head>

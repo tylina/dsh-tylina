@@ -1,12 +1,14 @@
 import { verifyEditAnimation } from './edit-animation.mjs'
-import { readEditorSource } from './dsh-source.mjs'
+import { readEditorSource, writeHarnessSource } from './dsh-source.mjs'
 import { commandInput } from './command-input.mjs'
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
-import { readFile, writeFile } from 'node:fs/promises'
+import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
-export async function verifyInstalledMcp({ page, frame, root, project, readMain, mode, expectedMissing }) {
+export async function verifyInstalledMcp({
+  page, frame, root, project, readMain, mode, expectedMissing, probeRequest, mark = () => undefined
+}) {
   const require = createRequire(join(root, 'package.json'))
   const { Client, StreamableHTTPClientTransport } = require('@modelcontextprotocol/client')
   const { StdioClientTransport } = require('@modelcontextprotocol/client/stdio')
@@ -53,17 +55,53 @@ export async function verifyInstalledMcp({ page, frame, root, project, readMain,
     assert.equal(context.selection.sourceSha256, undefined)
     assert.notEqual((await call('tylina_set_view', { target: 'mode', value: views.mode })).isError, true)
     const source = original + '\r\n\r\nEdited through the shared MCP connection.'
-    await writeFile(join(project, 'Plugin.typ'), source)
+    mark('source-edit')
+    await writeHarnessSource(probeRequest, source)
     const probe = async input => ({ isError: false, value: await client.callTool({ name: input.name, arguments: input.input }) })
     await expect.poll(async () => (await readEditorSource(page, probe)).text).toBe(source)
     await expect(frame.getByTestId('tylina-root')).toHaveAttribute('data-compile-status', 'success')
     await expect.poll(readMain).toBe(source)
     assert.equal((await call('tylina_validate_document')).structuredContent.valid, true)
+    const evaluated = await call('tylina_evaluate_document', {
+      expression: 'query(heading).len()'
+    })
+    assert.equal(evaluated.structuredContent.valid, true)
+    assert.equal(evaluated.structuredContent.value, 1)
+
+    mark('import')
+    const importDestination = 'output/mcp/imported.md'
+    const inspectedImport = await call('tylina_import_document', {
+      source: 'source.pdf',
+      destination: importDestination,
+      expectedDestinationSha256: null,
+      allowIncomplete: false
+    })
+    assert.equal(inspectedImport.structuredContent.status, 'source-hash-required')
+    const imported = await call('tylina_import_document', {
+      source: 'source.pdf',
+      expectedSourceSha256: inspectedImport.structuredContent.sourceSha256,
+      destination: importDestination,
+      expectedDestinationSha256: null,
+      allowIncomplete: false
+    })
+    assert.equal(imported.structuredContent.status, 'written')
+    assert.equal(imported.structuredContent.write.saved, true, JSON.stringify(imported.structuredContent.write))
+    assert.match(await readFile(join(project, importDestination), 'utf8'), /Imported through DSH\./u)
+    expectedMissing.add(importDestination)
+
     const image = await call('tylina_render_page', { page: 1, ppi: 48 })
     assert.ok(image.content.some((entry) => entry.type === 'image' && entry.mimeType === 'image/png' && entry.data.length > 100))
-    for (const format of ['pdf', 'png', 'svg']) {
+    for (const format of ['pdf', 'png', 'svg', 'pptx-visual', 'pptx-editable']) {
+      mark(`export-${format}`)
+      const presentation = format.startsWith('pptx-')
       const exported = await call('tylina_export_document', {
-        format, destination: format === 'pdf' ? 'output/mcp/document.pdf' : `output/mcp/${format}`, ppi: 48,
+        format,
+        destination: format === 'pdf'
+          ? 'output/mcp/document.pdf'
+          : presentation
+            ? `output/mcp/${format}.pptx`
+            : `output/mcp/${format}`,
+        ppi: 48
       })
       assert.notEqual(exported.isError, true, JSON.stringify(exported))
       const paths = exported.structuredContent.paths
@@ -73,18 +111,22 @@ export async function verifyInstalledMcp({ page, frame, root, project, readMain,
         const bytes = await readFile(join(project, path))
         if (format === 'pdf') assert.equal(bytes.subarray(0, 5).toString(), '%PDF-')
         else if (format === 'png') assert.deepEqual([...bytes.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10])
-        else assert.ok(bytes.toString().includes('<svg'))
+        else if (format === 'svg') assert.ok(bytes.toString().includes('<svg'))
+        else assert.equal(bytes.subarray(0, 4).toString('hex'), '504b0304')
       }
     }
     assert.match(await readFile(join(info.skillsRoot, 'typst-slides/SKILL.md'), 'utf8'), /Typst/)
     const templates = await call('tylina_list_templates', { query: 'amber', limit: 10 })
     assert.ok(templates.structuredContent.templates.some((entry) => entry.spec.startsWith('tylina:slides/')))
-    await verifyEditAnimation({ frame, expect,
+    await verifyEditAnimation({ frame, expect, mark,
       call: (command, args) => client.callTool({ name: 'tylina', arguments: { command, args } }),
-      writeSource: (text) => writeFile(join(project, 'Plugin.typ'), text),
+      writeSource: (text) => writeHarnessSource(probeRequest, text),
       screenshot: (view) => page.screenshot({ path: join(root, `.benchmarks/dsh-${mode}-animation-${view}.png`) })
     })
-    await writeFile(join(project, 'Plugin.typ'), original)
+    const preparedRestore = await call('tylina_save_workspace')
+    assert.equal(preparedRestore.structuredContent.saved, true, JSON.stringify(preparedRestore))
+    mark('restore')
+    await writeHarnessSource(probeRequest, original)
     await expect.poll(async () => (await readEditorSource(page, probe)).text).toBe(original)
     await expect.poll(readMain).toBe(original)
     await expect(frame.getByTestId('external-edit-transition')).toHaveCount(0)

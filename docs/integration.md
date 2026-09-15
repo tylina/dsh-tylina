@@ -179,8 +179,9 @@ The supplied credential is redacted from saved diagnostics; no request-body trac
 
 Screenshots and isolated profile logs live under `.benchmarks`. Set `TYLINA_DSH_OFFLINE=1` only when all exact
 dependencies are already in the local pnpm store; ordinary acceptance allows dependency downloads.
-For unpublished candidates, `TYLINA_DSH_WEB_ASSETS` and `TYLINA_DSH_NATIVE_RUNTIME` select local package
-directories. `TYLINA_DSH_PACKAGE_OVERRIDES` accepts a JSON object mapping additional npm package names
+For unpublished candidates, `TYLINA_DSH_SDK` selects the local SDK directory embedded at build time.
+`TYLINA_DSH_WEB_ASSETS` and `TYLINA_DSH_NATIVE_RUNTIME` select local package directories.
+`TYLINA_DSH_PACKAGE_OVERRIDES` accepts a JSON object mapping additional npm package names
 to local package directories or tarballs, including matching font packages. These overrides are installed
 in the isolated profile before the first `dsh plugin add`; acceptance must not rely on installing an older
 published dependency first. The distributed bundle manifests still use exact registry versions.

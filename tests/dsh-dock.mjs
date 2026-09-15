@@ -10,6 +10,11 @@ export async function verifyDock({ page, frame, iframe, context, root, mode, rea
   assert.ok(rect.x >= 380 && rect.width >= 420, 'chat and document have separate usable columns')
   assert.equal(await page.locator('body').evaluate((body) => Math.round(body.getBoundingClientRect().width)), Math.round(rect.x))
   const chat = page.locator('[contenteditable="true"]').first()
+  const requireCleanWorkspace = async () => {
+    const result = await probeRequest({ name: 'tylina_save_workspace' })
+    assert.equal(result.isError, false, JSON.stringify(result))
+    assert.equal(result.value.structuredContent.saved, true, JSON.stringify(result.value))
+  }
   await chat.fill('Keep this conversation draft while editing the document.')
   await expect(chat).toBeFocused()
   const chatRect = await chat.boundingBox()
@@ -75,11 +80,13 @@ export async function verifyDock({ page, frame, iframe, context, root, mode, rea
   } finally { await page.unroute('**/tylina/project?**', rejectSave) }
   await menu('File', 'Save')
   await expect.poll(readMain).toBe(external + ' Unsaved window handoff.')
+  await expect(frame.locator('.workspaceSaveNotice')).toHaveCount(0)
   const saved = await readEditorSource(page, probeRequest)
   await writeHarnessSource(probeRequest, external)
   await expect.poll(readMain).toBe(external)
   await frame.getByRole('button', { name: 'Split', exact: true }).click()
   await panel.getByRole('button', { name: /^(关闭提示|Dismiss message)$/u }).click()
+  await requireCleanWorkspace()
   const popupReady = context.waitForEvent('page')
   await popoutButton.click()
   const popup = await popupReady

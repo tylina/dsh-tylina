@@ -49,6 +49,7 @@ for (const mode of modes) {
   await mkdir(project)
   const source = '#let title="Tylina in dsh"\r\n= #title\r\n\r\nHello 世界'
   await writeFile(join(project, 'Plugin.typ'), source)
+  await writeFile(join(project, 'source.pdf'), createPdf('Imported through DSH.'))
   const archive = join(root, `release/${packageName}-${version}.tgz`)
   await access(archive)
   const candidates = {
@@ -126,6 +127,7 @@ for (const mode of modes) {
   let browser
   let page
   const errors = [], diagnostics = []
+  let phase = 'startup'
   const expectedMissing = new Set(['output/Agent.pdf'])
   try {
     const url = await urlReady
@@ -147,7 +149,17 @@ for (const mode of modes) {
       owner.on('response', (response) => {
         if (response.status() < 400 || diagnostics.length >= 256) return
         const url = new URL(response.url())
-        diagnostics.push({ kind: 'http', path: url.pathname, status: response.status(), read: url.searchParams.get('read') })
+        const request = response.request()
+        let write
+        if (url.pathname === '/tylina/project' && request.method() === 'POST') {
+          const body = request.postDataJSON()
+          const source = body.workspace?.files?.[body.workspace?.mainFile]
+          write = { revision: body.revision, mainFile: body.workspace?.mainFile,
+            sourceLength: typeof source === 'string' ? source.length : null,
+            sourcePreview: typeof source === 'string' ? source.slice(0, 512) : null }
+        }
+        diagnostics.push({ kind: 'http', phase, path: url.pathname,
+          status: response.status(), read: url.searchParams.get('read'), ...(write ? { write } : {}) })
       })
     })
     await context.exposeBinding('__tylinaAcceptanceError', ({ frame }, error) => {
@@ -226,12 +238,23 @@ for (const mode of modes) {
       if (!response.ok) throw new Error(await response.text())
       return response.json()
     }, { sessionId, ...input })
+    const requireCleanWorkspace = async () => {
+      const result = await probeRequest({ name: 'tylina_save_workspace' })
+      assert.equal(result.isError, false, JSON.stringify(result))
+      assert.equal(result.value.structuredContent.saved, true, JSON.stringify(result.value))
+    }
     await expect.poll(async () => (await probeRequest({ action: 'catalog' })).filter((tool) => tool.name === 'tylina').length).toBe(1)
     const validated = await probeRequest({ name: 'tylina_validate_document' })
     assert.equal(validated.isError, false)
     assert.equal(validated.value.structuredContent.valid, true)
-    await verifyInstalledMcp({ page, frame, root, project, readMain, mode, expectedMissing })
+    phase = 'installed-mcp'
+    await verifyInstalledMcp({ page, frame, root, project, readMain, mode, expectedMissing, probeRequest,
+      mark: (value) => { phase = `installed-mcp:${value}` } })
+    assert.deepEqual(diagnostics.filter((entry) => entry.kind === 'http' && entry.status === 409), [],
+      'shared document tools and external animation must not leave stale project writes')
+    phase = 'tool-reconnect'
     await verifyToolReconnect({ page, frame, root, mode, readMain, probeRequest, editorSockets, expect, expectedMissing })
+    phase = 'document-flow'
     const info = (await probeRequest({ name: 'tylina_workspace_info' })).value.structuredContent
     assert.equal(info.root, project)
     await access(join(info.skillsRoot, 'typst-slides/scripts/rotate_images.py'))
@@ -268,7 +291,8 @@ for (const mode of modes) {
     await menu('Edit', 'Undo'); await expect.poll(readMain).toBe(edited)
     await menu('Edit', 'Redo'); await expect.poll(readMain).toBe(agentEdited)
     const external = agentEdited + '\r\n\r\nExternal Harness edit'
-    await writeFile(join(project, 'Plugin.typ'), external)
+    await requireCleanWorkspace()
+    await writeHarnessSource(probeRequest, external)
     await expect.poll(async () => (await readEditorSource(page, probeRequest)).text).toBe(external)
     await menu('Edit', 'Undo'); await expect.poll(readMain).toBe(agentEdited)
     await menu('Edit', 'Redo'); await expect.poll(readMain).toBe(external)
@@ -286,7 +310,9 @@ for (const mode of modes) {
     assert.equal(sockets.length, mode === 'native' ? 1 : 0, 'hiding the editor must retain its runtime')
     await expect(frame.locator('.typst-doc')).toBeVisible()
     await page.screenshot({ path: join(root, `.benchmarks/dsh-${mode}.png`) })
+    phase = 'dock'
     await (betterSidebar ? verifyBetterSidebar : verifyDock)({ page, frame, iframe, context, root, mode, readMain, probeRequest, expect, external, menu })
+    phase = 'session-following'
     await verifySessionFollowing({ page, frame, home, probeRequest, readMain, external, expect })
     if (betterSidebar) await expectPersistedDocumentTab({ page, sessionId, expect })
     await page.reload()
@@ -342,7 +368,8 @@ for (const mode of modes) {
       [], 'the host console must not contain application errors')
     assert.deepEqual(diagnostics.filter((entry) => entry.kind === 'request' && entry.error !== 'net::ERR_ABORTED'),
       [], 'retired request cancellation is expected; other network failures are not')
-    console.log(`PASS ${mode}: packed install, actual Agent loop and projects, compile/format, disk saves, external Undo, PDF/PNG/SVG export, image receipts, context replacement, host Agent navigation, hide/reopen, reload and disposal`)
+    console.log(`PASS ${mode}: packed install, Agent loop, eval/import, PDF/PNG/SVG/PPTX export, ` +
+      'disk saves, external Undo, image receipts, navigation, reload and disposal')
   } catch (error) {
     if (page) { const url = new URL(page.url()); console.error('Failed page:', url.origin + url.pathname); console.error((await page.locator('body').innerText().catch(() => '')).slice(0, 1800)) }
     await page?.screenshot({ path: join(root, `.benchmarks/dsh-${mode}-failure.png`) }).catch(() => undefined)
@@ -359,4 +386,29 @@ for (const mode of modes) {
     await writeFile(join(home, 'browser-diagnostics.json'), (JSON.stringify({ errors, diagnostics }, null, 2) + '\n')
       .replaceAll(env.TYLINA_DSH_LIVE_KEY || '__no_live_credential__', '[redacted]'))
   }
+}
+
+function createPdf(text) {
+  const stream = `BT /F1 12 Tf 72 720 Td (${text}) Tj ET`
+  const objects = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] ' +
+      '/Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>',
+    `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'
+  ]
+  let source = '%PDF-1.4\n'
+  const offsets = []
+  for (const [index, object] of objects.entries()) {
+    offsets.push(Buffer.byteLength(source))
+    source += `${index + 1} 0 obj\n${object}\nendobj\n`
+  }
+  const xref = Buffer.byteLength(source)
+  source += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`
+  source += offsets
+    .map((offset) => `${String(offset).padStart(10, '0')} 00000 n \n`)
+    .join('')
+  source += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\n`
+  return Buffer.from(`${source}startxref\n${xref}\n%%EOF\n`)
 }

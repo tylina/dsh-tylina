@@ -65,12 +65,36 @@ export async function openHarnessDocument(container: HTMLElement, options: {
   let timer: ReturnType<typeof setTimeout> | undefined
   let closed = false
   let reconnecting: Promise<void> | undefined
+  let rememberedSelection = {
+    mainFile: initial.workspace.mainFile,
+    activeFile: initial.workspace.activeFile
+  }
+  const rememberSelection = (selection: Pick<ProjectSnapshot['workspace'], 'mainFile' | 'activeFile'>) => {
+    if (
+      selection.mainFile === rememberedSelection.mainFile &&
+      selection.activeFile === rememberedSelection.activeFile
+    ) return
+    rememberedSelection = {
+      mainFile: selection.mainFile,
+      activeFile: selection.activeFile
+    }
+    if (selection.mainFile) url.searchParams.set('main', selection.mainFile); else url.searchParams.delete('main')
+    if (selection.activeFile) url.searchParams.set('file', selection.activeFile); else url.searchParams.delete('file')
+    try { localStorage.setItem(preferenceKey, JSON.stringify(selection)) }
+    catch { /* Navigation preferences are optional, not document storage. */ }
+  }
   // SDK disposal rejects pending work. A retired view cannot report into its replacement's UI.
   const report = (error: Error) => { if (!closed && !lifetime.signal.aborted && !options.signal?.aborted) options.onError(error) }
   const editor = await createTylinaEditor(container, {
     signal: options.signal,
     editorUrl: new URL('/tylina/embed.html', location.href), workspace: decodeWorkspace(initial.workspace),
     workspaceRevision: revision, tools: true,
+    // The optional selection payload was added without breaking older SDKs,
+    // whose declaration still models onChange as a zero-argument callback.
+    onChange: (...args: unknown[]) => {
+      const selection = args[0]
+      if (isWorkspaceSelection(selection)) rememberSelection(selection)
+    },
     fileSystem: { async readFile(path, signal) {
       const fileUrl = new URL(url); fileUrl.searchParams.set('read', path)
       const response = await fetch(fileUrl, { credentials: 'same-origin', redirect: 'error', cache: 'no-store',
@@ -92,10 +116,7 @@ export async function openHarnessDocument(container: HTMLElement, options: {
         signal: AbortSignal.any([context.signal, lifetime.signal]) })
       const acknowledgment = await response.json() as { revision: string }
       revision = acknowledgment.revision
-      if (workspace.mainFile) url.searchParams.set('main', workspace.mainFile); else url.searchParams.delete('main')
-      if (workspace.activeFile) url.searchParams.set('file', workspace.activeFile); else url.searchParams.delete('file')
-      try { localStorage.setItem(preferenceKey, JSON.stringify({ mainFile: workspace.mainFile, activeFile: workspace.activeFile })) }
-      catch { /* Saving actual project bytes does not depend on optional navigation preferences. */ }
+      rememberSelection(workspace)
       return acknowledgment
     }
   }).catch((error) => { lifetime.abort(); options.prepared.dispose(); throw error })
@@ -145,6 +166,17 @@ export async function openHarnessDocument(container: HTMLElement, options: {
     if (!tools) throw new Error('The document tools are not connected')
     return tools.mcpConfiguration()
   } }
+}
+
+function isWorkspaceSelection(
+  value: unknown
+): value is Pick<ProjectSnapshot['workspace'], 'mainFile' | 'activeFile'> {
+  if (!value || typeof value !== 'object') return false
+  const selection = value as { mainFile?: unknown; activeFile?: unknown }
+  return (
+    (selection.mainFile === null || typeof selection.mainFile === 'string') &&
+    (selection.activeFile === null || typeof selection.activeFile === 'string')
+  )
 }
 
 /** Cancelling a tool does not cancel a shared background refresh or delay release. */

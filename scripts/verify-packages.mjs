@@ -3,9 +3,14 @@ import { readFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import { join } from 'node:path'
-import { root, assetsRoot } from '../source.mjs'
+import { root, publishedAssetsRoot, sdkRoot } from '../source.mjs'
 execFileSync(process.execPath, ['scripts/version.mjs', '--check'], { cwd: root })
-const assetsVersion = JSON.parse(readFileSync(join(assetsRoot, 'package.json'), 'utf8')).version
+const assetsVersion = JSON.parse(
+  readFileSync(join(publishedAssetsRoot, 'package.json'), 'utf8')
+).version
+const sdkNotices = JSON.parse(
+  readFileSync(join(sdkRoot, 'licenses/dependencies.json'), 'utf8')
+).flatMap((dependency) => dependency.notices)
 const release = join(root, 'release')
 const { artifacts } = JSON.parse(readFileSync(join(release, 'manifest.json'), 'utf8'))
 assert.equal(artifacts.length, 2)
@@ -26,6 +31,10 @@ for (const artifact of artifacts) {
     assert.ok(!dependency.startsWith('workspace:') && !dependency.startsWith('file:') && !dependency.startsWith('link:'))
   }
   for (const path of ['dist/index.js', 'dist/client.js', 'dist/web/project-window.html', 'cordis.patch.yml']) assert.ok(names.includes(`package/${path}`), path)
+  assert.ok(names.includes('package/dist/licenses/sdk/dependencies.json'))
+  for (const notice of sdkNotices) {
+    assert.ok(names.includes(`package/dist/licenses/sdk/${notice}`), notice)
+  }
   assert.ok(!names.some((path) => path.includes('/node_modules/') || path.startsWith('package/plugin/src/') || path.startsWith('package/.tylina/')))
   assert.equal(manifest.dependencies['tylina-web-assets'], assetsVersion)
   assert.ok(artifact.bytes < 20 * 1024 * 1024, 'Integration must reuse shared npm resources')

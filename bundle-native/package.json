@@ -1,6 +1,6 @@
 {
   "name": "dsh-tylina-native",
-  "version": "0.15.0-alpha.2",
+  "version": "0.15.0",
   "type": "module",
   "license": "UNLICENSED",
   "description": "Tylina native runtime bundle for DeepSeek Harness",
@@ -49,7 +49,7 @@
   },
   "publishConfig": {
     "access": "public",
-    "tag": "alpha"
+    "tag": "latest"
   },
   "engines": {
     "node": ">=22.19.0"

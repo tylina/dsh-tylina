@@ -1,6 +1,6 @@
 {
   "name": "@tylina/dsh-workspace",
-  "version": "0.15.0-alpha.2",
+  "version": "0.15.0",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.9.0",

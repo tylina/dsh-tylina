@@ -1,6 +1,6 @@
 {
   "name": "dsh-tylina",
-  "version": "0.15.0-alpha.2",
+  "version": "0.15.0",
   "type": "module",
   "license": "UNLICENSED",
   "description": "Tylina wasm runtime bundle for DeepSeek Harness",
@@ -59,7 +59,7 @@
   "homepage": "https://github.com/tylina/dsh-tylina#readme",
   "publishConfig": {
     "access": "public",
-    "tag": "alpha"
+    "tag": "latest"
   },
   "peerDependenciesMeta": {
     "dsh-better-sidebar": {

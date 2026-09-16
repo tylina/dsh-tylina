@@ -3,10 +3,10 @@ import { readFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import { join } from 'node:path'
-import { root, publishedAssetsRoot, sdkRoot } from '../source.mjs'
+import { assetsRoot, root, sdkRoot } from '../source.mjs'
 execFileSync(process.execPath, ['scripts/version.mjs', '--check'], { cwd: root })
 const assetsVersion = JSON.parse(
-  readFileSync(join(publishedAssetsRoot, 'package.json'), 'utf8')
+  readFileSync(join(assetsRoot, 'package.json'), 'utf8')
 ).version
 const sdkNotices = JSON.parse(
   readFileSync(join(sdkRoot, 'licenses/dependencies.json'), 'utf8')

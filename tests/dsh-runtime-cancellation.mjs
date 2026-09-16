@@ -3,14 +3,16 @@ import { once } from 'node:events'
 import { mkdir, mkdtemp, rm } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { createRequire } from 'node:module'
-import { dirname, join } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { after, test } from 'node:test'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const require = createRequire(join(root, 'plugin/package.json'))
 const { WebSocket } = require('ws')
-const sdk = require.resolve('tylina-sdk/package.json')
+const sdk = process.env.TYLINA_DSH_SDK
+  ? join(resolve(process.env.TYLINA_DSH_SDK), 'package.json')
+  : require.resolve('tylina-sdk/package.json')
 const { createWebSocketRuntime } = await import(pathToFileURL(join(dirname(sdk), require(sdk).exports['./client'].import)).href)
 const binary = process.env.TYLINA_TEST_SIDECAR
 assert.ok(binary, 'Set TYLINA_TEST_SIDECAR to a release tylina-tinymist executable')

@@ -1,6 +1,5 @@
 import { verifyEditAnimation } from './edit-animation.mjs'
 import { readEditorSource, writeHarnessSource } from './dsh-source.mjs'
-import { commandInput } from './command-input.mjs'
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
 import { readFile } from 'node:fs/promises'
@@ -40,20 +39,20 @@ export async function verifyInstalledMcp({
     const catalog = await client.listTools()
     assert.equal(catalog.tools.length, 1)
     assert.match(client.getInstructions(), /one tool named `tylina`/)
-    const call = (name, args = {}) => client.callTool(commandInput(name, args))
-    const info = (await call('tylina_workspace_info')).structuredContent
+    const call = (command, args = {}) => client.callTool({ name: 'tylina', arguments: { command, args } })
+    const info = (await call('workspace.info')).structuredContent
     assert.equal(info.root, project)
     const original = await readMain()
-    const views = (await call('tylina_view_state')).structuredContent
-    assert.notEqual((await call('tylina_set_view', { target: 'mode', value: 'split' })).isError, true)
+    const views = (await call('view.state')).structuredContent
+    assert.notEqual((await call('view.set', { target: 'mode', value: 'split' })).isError, true)
     await frame.getByTestId('monaco-source-editor').click({ position: { x: 180, y: 12 } })
     await page.keyboard.press('ControlOrMeta+a')
     await button.focus()
-    const context = (await call('tylina_editor_context')).structuredContent
+    const context = (await call('editor.state')).structuredContent
     assert.equal(context.selection.text, original, 'stdio reads the real selection after focus leaves the editor')
     assert.equal(context.selection.file, 'Plugin.typ')
     assert.equal(context.selection.sourceSha256, undefined)
-    assert.notEqual((await call('tylina_set_view', { target: 'mode', value: views.mode })).isError, true)
+    assert.notEqual((await call('view.set', { target: 'mode', value: views.mode })).isError, true)
     const source = original + '\r\n\r\nEdited through the shared MCP connection.'
     mark('source-edit')
     await writeHarnessSource(probeRequest, source)
@@ -61,8 +60,8 @@ export async function verifyInstalledMcp({
     await expect.poll(async () => (await readEditorSource(page, probe)).text).toBe(source)
     await expect(frame.getByTestId('tylina-root')).toHaveAttribute('data-compile-status', 'success')
     await expect.poll(readMain).toBe(source)
-    assert.equal((await call('tylina_validate_document')).structuredContent.valid, true)
-    const evaluated = await call('tylina_evaluate_document', {
+    assert.equal((await call('document.validate')).structuredContent.valid, true)
+    const evaluated = await call('document.eval', {
       expression: 'query(heading).len()'
     })
     assert.equal(evaluated.structuredContent.valid, true)
@@ -70,7 +69,7 @@ export async function verifyInstalledMcp({
 
     mark('import')
     const importDestination = 'output/mcp/imported.md'
-    const imported = await call('tylina_import_document', {
+    const imported = await call('document.import', {
       source: 'source.pdf',
       destination: importDestination,
       allowIncomplete: false
@@ -80,12 +79,12 @@ export async function verifyInstalledMcp({
     assert.match(await readFile(join(project, importDestination), 'utf8'), /Imported through DSH\./u)
     expectedMissing.add(importDestination)
 
-    const image = await call('tylina_render_page', { page: 1, ppi: 48 })
+    const image = await call('render.page', { page: 1, ppi: 48 })
     assert.ok(image.content.some((entry) => entry.type === 'image' && entry.mimeType === 'image/png' && entry.data.length > 100))
     for (const format of ['pdf', 'png', 'svg', 'pptx-visual', 'pptx-editable']) {
       mark(`export-${format}`)
       const presentation = format.startsWith('pptx-')
-      const exported = await call('tylina_export_document', {
+      const exported = await call('document.export', {
         format,
         destination: format === 'pdf'
           ? 'output/mcp/document.pdf'
@@ -106,17 +105,17 @@ export async function verifyInstalledMcp({
         else assert.equal(bytes.subarray(0, 4).toString('hex'), '504b0304')
       }
     }
-    const skill = await call('tylina_read_skill_resource', { path: 'typst-slides/SKILL.md' })
+    const skill = await call('skill.read', { path: 'typst-slides/SKILL.md' })
     assert.equal(skill.structuredContent.available, true)
-    assert.match(skill.structuredContent.content, /Typst/)
-    const templates = await call('tylina_list_templates', { query: 'amber', limit: 10 })
+    assert.match(skill.content.find((entry) => entry.type === 'text')?.text ?? '', /Typst/)
+    const templates = await call('template.list', { query: 'amber', limit: 10 })
     assert.ok(templates.structuredContent.templates.some((entry) => entry.spec.startsWith('tylina:slides/')))
     await verifyEditAnimation({ frame, expect, mark,
       call: (command, args) => client.callTool({ name: 'tylina', arguments: { command, args } }),
       writeSource: (text) => writeHarnessSource(probeRequest, text),
       screenshot: (view) => page.screenshot({ path: join(root, `.benchmarks/dsh-${mode}-animation-${view}.png`) })
     })
-    const preparedRestore = await call('tylina_save_workspace')
+    const preparedRestore = await call('workspace.save')
     assert.equal(preparedRestore.structuredContent.saved, true, JSON.stringify(preparedRestore))
     mark('restore')
     await writeHarnessSource(probeRequest, original)

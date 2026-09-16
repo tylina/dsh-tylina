@@ -142,6 +142,13 @@ export async function openHarnessDocument(container: HTMLElement, options: {
       // Never validate/export pre-edit source or swallow a refresh conflict.
       await whileActive((async () => { await refreshing; await refresh() })(), context?.signal)
       context?.signal?.throwIfAborted()
+      if (isWorkspaceSave(name, input)) {
+        const saved = await editor.save()
+        context?.signal?.throwIfAborted()
+        if (!saved) throw new Error('Resolve the workspace save issue before continuing')
+        const value = { saved: true }
+        return { structuredContent: value, content: [{ type: 'text', text: JSON.stringify(value) }] }
+      }
       return editor.callTool(name, input, context)
     }
   }
@@ -166,6 +173,11 @@ export async function openHarnessDocument(container: HTMLElement, options: {
     if (!tools) throw new Error('The document tools are not connected')
     return tools.mcpConfiguration()
   } }
+}
+
+function isWorkspaceSave(name: string, input: unknown): boolean {
+  if (name !== 'tylina' || !input || typeof input !== 'object') return false
+  return (input as { command?: unknown }).command === 'workspace.save'
 }
 
 function isWorkspaceSelection(

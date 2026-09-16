@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { readFile, readdir } from 'node:fs/promises'
+import { access, readFile, readdir } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -16,7 +16,13 @@ test('released Harness discovers all bundled domains and loads their exact bodie
   await ctx.plugin(SkillRegistry)
   const { assetsRoot } = await import('../source.mjs')
   const resources = join(assetsRoot, 'skills')
-  const expected = (await readdir(resources)).filter((name) => name.startsWith('typst-')).sort()
+  const expected = []
+  for (const entry of await readdir(resources, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue
+    try { await access(join(resources, entry.name, 'SKILL.md')); expected.push(entry.name) }
+    catch { /* Shared resource directories are not Skills. */ }
+  }
+  expected.sort()
   const owner = ctx.plugin({ inject: ['skills'], apply(ctx) { registerTylinaSkills(ctx, resources) } })
   await owner
   try {

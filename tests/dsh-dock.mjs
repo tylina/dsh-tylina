@@ -11,7 +11,10 @@ export async function verifyDock({ page, frame, iframe, context, root, mode, rea
   assert.equal(await page.locator('body').evaluate((body) => Math.round(body.getBoundingClientRect().width)), Math.round(rect.x))
   const chat = page.locator('[contenteditable="true"]').first()
   const requireCleanWorkspace = async () => {
-    const result = await probeRequest({ name: 'tylina_save_workspace' })
+    const result = await probeRequest({
+      name: 'tylina',
+      input: { command: 'workspace.save', args: {} }
+    })
     assert.equal(result.isError, false, JSON.stringify(result))
     assert.equal(result.value.structuredContent.saved, true, JSON.stringify(result.value))
   }

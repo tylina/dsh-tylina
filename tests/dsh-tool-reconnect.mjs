@@ -31,7 +31,8 @@ export async function verifyToolReconnect({ page, frame, root, mode, readMain, p
     const entered = editorSockets.at(-1).waitForEvent('framereceived', {
       predicate: ({ payload }) => {
         const message = JSON.parse(String(payload))
-        return message.kind === 'call' && message.name === 'tylina_save_workspace'
+        return message.kind === 'call' && message.name === 'tylina' &&
+          message.input?.command === 'workspace.save'
       }
     })
     result = call('workspace.save')

@@ -1,4 +1,3 @@
-import { commandInput } from './command-input.mjs'
 import assert from 'node:assert/strict'
 import { join } from 'node:path'
 import { LlmAdapter } from '@deepseek-ai/dsh-llm'
@@ -49,7 +48,7 @@ export function createModelFixture(ctx) {
         const value = () => JSON.parse(prior.content.filter((block) => block.type === 'text').map((block) => block.text).join('\n'))
         let name, input
         switch (run.step++) {
-          case 0: name = 'tylina_workspace_info'; input = {}; break
+          case 0: name = 'tylina'; input = { command: 'workspace.info', args: {} }; break
           case 1:
             run.file = join(value().root, 'Plugin.typ')
             name = 'read'; input = { file_path: run.file }; break
@@ -59,13 +58,14 @@ export function createModelFixture(ctx) {
             assert.ok(prior.content.some(block => block.type === 'text' && block.text.includes('External Harness edit')))
             name = 'edit'; input = { file_path: run.file,
               old_string: 'External Harness edit', new_string: `External Harness edit\r\n${run.marker}` }; break
-          case 3: name = 'tylina_validate_document'; input = {}; break
+          case 3: name = 'tylina'; input = { command: 'document.validate', args: {} }; break
           case 4:
             assert.equal(value().valid, true)
-            name = 'tylina_export_document'; input = { format: 'pdf', destination: 'output/Agent.pdf', overwrite: true }; break
+            name = 'tylina'; input = { command: 'document.export',
+              args: { format: 'pdf', destination: 'output/Agent.pdf', overwrite: true } }; break
           case 5:
             assert.deepEqual(value().paths, ['output/Agent.pdf'])
-            name = 'tylina_render_page'; input = { page: 1 }; break
+            name = 'tylina'; input = { command: 'render.page', args: { page: 1 } }; break
           default:
             assert.ok(prior.content.some((block) => block.type === 'image' && block.attachment?.attachmentId))
             run.complete = true
@@ -76,8 +76,6 @@ export function createModelFixture(ctx) {
             return
         }
         run.lastCall = `tylina-model-${++sequence}`
-        const request = commandInput(name, input)
-        name = request.name; input = request.arguments
         const args = JSON.stringify(input)
         yield { type: 'block-start', index: 0, blockType: 'tool-call' }
         yield { type: 'tool-call-delta', index: 0, id: run.lastCall, name, argumentsDelta: args }

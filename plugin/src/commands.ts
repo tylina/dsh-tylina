@@ -15,6 +15,10 @@ const noArgumentsSchema = {
   additionalProperties: false
 } as unknown as CommandInputSchema
 
+const commandByOperation = new Map(
+  Object.entries(TYLINA_COMMANDS).map(([command, operation]) => [operation, command])
+)
+
 /** The same command gateway serves Harness tools and external MCP clients. */
 export function createHarnessCommands(call: EditorToolCaller) {
   const definitions = createTylinaToolDefinitions()
@@ -32,6 +36,9 @@ export function createHarnessCommands(call: EditorToolCaller) {
         openWorldHint: false
       }
     }
-  ], (name, input, context) =>
-    call(name, input, context?.signal ?? new AbortController().signal))
+  ], (name, input, context) => {
+    const command = commandByOperation.get(name)
+    if (!command) throw new Error(`Unavailable Tylina operation: ${name}`)
+    return call('tylina', { command, args: input }, context?.signal ?? new AbortController().signal)
+  })
 }

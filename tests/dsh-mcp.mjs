@@ -1,6 +1,5 @@
 import { execFile, spawn } from 'node:child_process'
 import { promisify } from 'node:util'
-import { commandInput } from './command-input.mjs'
 import assert from 'node:assert/strict'
 import { once } from 'node:events'
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
@@ -37,8 +36,6 @@ async function connect(origin, connection, mode) {
   await client.connect(new StreamableHTTPClientTransport(new URL(connection.path, origin), {
     requestInit: { headers: { Authorization: `Bearer ${connection.token}` } }
   }))
-  const originalCall = client.callTool.bind(client)
-  client.callTool = ({ name, arguments: args }, ...rest) => originalCall(commandInput(name, args), ...rest)
   return client
 }
 
@@ -81,9 +78,9 @@ test(`${mode}: real HTTP MCP discovers the shared tools, instructions and images
         source: 'source.pdf', destination: 'source.md'
       } } })
       assert.equal(imported.structuredContent.project, 'bound-project')
-      assert.deepEqual(calls.at(-1), { name: 'tylina_import_document', input: {
+      assert.deepEqual(calls.at(-1), { name: 'tylina', input: { command: 'document.import', args: {
         source: 'source.pdf', destination: 'source.md', allowIncomplete: false
-      } })
+      } } })
       expectedCalls += 1
     }
     if (commands.includes('image.search')) {
@@ -96,9 +93,9 @@ test(`${mode}: real HTTP MCP discovers the shared tools, instructions and images
         command: 'image.search', args: { query: 'research diagram', aspectRatio: 'wide' }
       } })
       assert.equal(searched.structuredContent.project, 'bound-project')
-      assert.deepEqual(calls.at(-1), { name: 'tylina_search_images', input: {
+      assert.deepEqual(calls.at(-1), { name: 'tylina', input: { command: 'image.search', args: {
         query: 'research diagram', licensePolicy: 'adaptable', aspectRatio: 'wide', page: 1, limit: 8
-      } })
+      } } })
       const imported = await client.callTool({ name: 'tylina', arguments: {
         command: 'image.import', args: {
           id: '93d7039b-2a78-41d0-b122-423e428e91ce',
@@ -107,19 +104,23 @@ test(`${mode}: real HTTP MCP discovers the shared tools, instructions and images
         }
       } })
       assert.equal(imported.structuredContent.project, 'bound-project')
-      assert.deepEqual(calls.at(-1), { name: 'tylina_import_image', input: {
+      assert.deepEqual(calls.at(-1), { name: 'tylina', input: { command: 'image.import', args: {
         id: '93d7039b-2a78-41d0-b122-423e428e91ce',
         licensePolicy: 'adaptable',
         destination: 'assets/diagram.png'
-      } })
+      } } })
       expectedCalls += 2
     }
-    const result = await client.callTool({ name: 'tylina_render_page', arguments: { page: 1 } })
+    const result = await client.callTool({ name: 'tylina', arguments: { command: 'render.page', args: { page: 1 } } })
     assert.equal(result.structuredContent.project, 'bound-project')
     assert.equal(result.content[1].mimeType, 'image/png')
     expectedCalls++
+    assert.deepEqual(calls.at(-1), { name: 'tylina', input: { command: 'render.page', args: { page: 1 } } })
     assert.equal(calls.length, expectedCalls)
-    const invalid = await client.callTool({ name: 'tylina_write_file', arguments: { file: 'main.typ' } })
+    await assert.rejects(client.callTool({ name: 'tylina_write_file', arguments: { file: 'main.typ' } }), /not found/i)
+    const invalid = await client.callTool({ name: 'tylina', arguments: {
+      command: 'file.write', args: { file: 'main.typ' }
+    } })
     assert.equal(invalid.isError, true)
     assert.equal(calls.length, expectedCalls, 'invalid mutations are rejected before reaching the editor')
     await assert.rejects(client.callTool({ name: 'not-a-tylina-tool', arguments: {} }), /not found/)
@@ -145,7 +146,9 @@ test(`${mode}: HTTP cancellation and editor expiry reach actual pending work wit
   try {
     client = await connect(env.origin, bound.connection, mode)
     const abort = new AbortController()
-    const pending = client.callTool({ name: 'tylina_set_main_file', arguments: { file: 'main.typ' } }, { signal: abort.signal })
+    const pending = client.callTool({ name: 'tylina', arguments: {
+      command: 'document.setMain', args: { file: 'main.typ' }
+    } }, { signal: abort.signal })
     const rejected = assert.rejects(pending)
     const signal = await entered.promise
     const stopped = once(signal, 'abort')
@@ -179,15 +182,17 @@ test('SDK CLI uses the same authenticated command protocol and preserves failure
         assert.ok(JSON.parse(help.stdout).structuredContent.commands.some((item) => item.command === 'editor.state'))
       }
       const read = await run(process.execPath, [process.env.TYLINA_SDK_CLI, 'document.targets', '--args', JSON.stringify({ file: 'notes.typ' })], options)
-      assert.equal(JSON.parse(read.stdout).structuredContent.received.file, 'notes.typ')
-      assert.equal(calls.at(-1).name, 'tylina_semantic_targets')
+      assert.equal(JSON.parse(read.stdout).structuredContent.received.args.file, 'notes.typ')
+      assert.deepEqual(calls.at(-1), { name: 'tylina', input: {
+        command: 'document.targets', args: { file: 'notes.typ' }
+      } })
       const connectionFile = join(temporary, 'copied-mcp.json')
       await writeFile(connectionFile, JSON.stringify({ mcpServers: { tylina: { type: 'http',
         url: options.env.TYLINA_MCP_URL, headers: { Authorization: `Bearer ${bound.connection.token}` } } } }), { mode: 0o600 })
       const fileEnv = { ...process.env }; delete fileEnv.TYLINA_MCP_URL; delete fileEnv.TYLINA_MCP_TOKEN
       const fromFile = await run(process.execPath, [process.env.TYLINA_SDK_CLI, 'document.targets', '--connection', connectionFile,
         '--args', JSON.stringify({ file: 'copied.typ' })], { ...options, env: fileEnv })
-      assert.equal(JSON.parse(fromFile.stdout).structuredContent.received.file, 'copied.typ')
+      assert.equal(JSON.parse(fromFile.stdout).structuredContent.received.args.file, 'copied.typ')
       await assert.rejects(run(process.execPath, [process.env.TYLINA_SDK_CLI, 'file.edit', '--args', '{}'], options), (error) => error.code === 1)
       assert.equal(calls.length, 2, 'invalid CLI writes never reach the editor')
     } finally { await bound.dispose(); await env.dispose() }
@@ -200,7 +205,9 @@ test(`${mode}: SDK stdio exposes only the live gateway and preserves instruction
     let count = 0
     const bound = env.host.open(async (_name, input, signal) => {
       count++
-      if (input.file === 'wait.typ') { entered.resolve(signal); await work.promise; signal.throwIfAborted() }
+      if (input.command === 'document.targets' && input.args?.file === 'wait.typ') {
+        entered.resolve(signal); await work.promise; signal.throwIfAborted()
+      }
       return { structuredContent: { selection: '实际选区🙂', received: input }, content: [
         { type: 'text', text: 'Live editor result' }, { type: 'image', mimeType: 'image/png', data: 'iVBORw0KGgo=' },
       ] }

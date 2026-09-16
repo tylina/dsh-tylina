@@ -32,7 +32,11 @@ export async function verifySessionFollowing({ page, frame, home, probeRequest, 
   await expect.poll(() => count()).toBe(0)
   await expect(page.locator('.tylina-dsh-error')).toHaveCount(0)
   await expect(page.locator('.tylina-dsh-bar .tylina-dsh-brand img')).toHaveCount(0)
-  const info = (await probeRequest({ sessionId: second.sessionId, name: 'tylina_workspace_info' })).value.structuredContent
+  const info = (await probeRequest({
+    sessionId: second.sessionId,
+    name: 'tylina',
+    input: { command: 'workspace.info', args: {} }
+  })).value.structuredContent
   assert.equal(info.root, cwd)
   await expect.poll(readMain).toBe(external)
   await hide.click()

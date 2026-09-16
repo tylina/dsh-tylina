@@ -82,8 +82,6 @@ for (const mode of modes) {
   await mkdir(probe)
   await cp(join(root, 'tests/dsh-probe.mjs'), join(probe, 'index.mjs'))
   await cp(join(root, 'tests/dsh-model-fixture.mjs'), join(probe, 'dsh-model-fixture.mjs'))
-  await createRequire(join(root, 'plugin/package.json'))('esbuild').build({ entryPoints: [join(root, 'tests/command-input.mjs')],
-    outfile: join(probe, 'command-input.mjs'), bundle: true, platform: 'node', format: 'esm', target: 'node22' })
   await writeFile(join(probe, 'package.json'), JSON.stringify({ name: 'tylina-acceptance-probe', version: '1.0.0', type: 'module',
     dependencies: { '@deepseek-ai/dsh-llm': '0.1.2-rc.1' },
     exports: './index.mjs', dsh: { bundle: { patch: './cordis.patch.yml' } } }))
@@ -238,14 +236,18 @@ for (const mode of modes) {
       if (!response.ok) throw new Error(await response.text())
       return response.json()
     }, { sessionId, ...input })
+    const command = (name, args = {}) => probeRequest({
+      name: 'tylina',
+      input: { command: name, args }
+    })
     const requireCleanWorkspace = async () => {
-      const result = await probeRequest({ name: 'tylina_save_workspace' })
+      const result = await command('workspace.save')
       assert.equal(result.isError, false, JSON.stringify(result))
       assert.equal(result.value.structuredContent.saved, true, JSON.stringify(result.value))
     }
     await expect.poll(async () => (await probeRequest({ action: 'catalog' })).filter((tool) => tool.name === 'tylina').length).toBe(1)
-    const validated = await probeRequest({ name: 'tylina_validate_document' })
-    assert.equal(validated.isError, false)
+    const validated = await command('document.validate')
+    assert.equal(validated.isError, false, JSON.stringify(validated))
     assert.equal(validated.value.structuredContent.valid, true)
     phase = 'installed-mcp'
     await verifyInstalledMcp({ page, frame, root, project, readMain, mode, expectedMissing, probeRequest,
@@ -255,14 +257,12 @@ for (const mode of modes) {
     phase = 'tool-reconnect'
     await verifyToolReconnect({ page, frame, root, mode, readMain, probeRequest, editorSockets, expect, expectedMissing })
     phase = 'document-flow'
-    const info = (await probeRequest({ name: 'tylina_workspace_info' })).value.structuredContent
+    const info = (await command('workspace.info')).value.structuredContent
     assert.equal(info.root, project)
     assert.equal(info.skillsRoot, undefined)
-    const skill = await probeRequest({ name: 'tylina_read_skill_resource', input: {
-      path: 'typst-slides/SKILL.md'
-    } })
+    const skill = await command('skill.read', { path: 'typst-slides/SKILL.md' })
     assert.equal(skill.isError, false, JSON.stringify(skill))
-    assert.match(skill.value.structuredContent.content, /Typst/)
+    assert.match(skill.value.content.find((entry) => entry.type === 'text')?.text ?? '', /Typst/)
     await expect.poll(readMain).toBe(source)
     await menu('Format', 'Format Document')
     await expect.poll(readMain).toContain('#let title = "Tylina in dsh"')
@@ -306,7 +306,7 @@ for (const mode of modes) {
     await expect(iframe).toBeHidden()
     await expect(page.getByRole('button', { name: /^(打开 Tylina|Open Tylina)$/u })).toBeFocused()
     await expect(frame.locator('.workspaceAgentDock')).toHaveCount(0)
-    const rendered = await probeRequest({ name: 'tylina_render_page', input: { page: 1 } })
+    const rendered = await command('render.page', { page: 1 })
     assert.equal(rendered.isError, false)
     assert.ok(rendered.content.some((part) => part.type === 'image' && part.attachment?.attachmentId), 'the hidden live editor renders into real Harness attachments')
     await page.getByRole('button', { name: /^(打开 Tylina|Open Tylina)$/u }).click()

@@ -74,21 +74,17 @@ test(`${mode}: real HTTP MCP discovers the shared tools, instructions and images
     assert.ok(help.structuredContent.inputSchema.required.includes('file'))
     let expectedCalls = 0
     if (commands.includes('document.import')) {
-      assert.ok(commands.includes('file.read'), 'matching SDKs must expose binary-safe metadata with import')
-      const readHelp = await client.callTool({ name: 'tylina', arguments: { command: 'help', args: { command: 'file.read' } } })
-      assert.ok(readHelp.structuredContent.inputSchema.required.includes('file'))
-      const binary = await client.callTool({ name: 'tylina', arguments: { command: 'file.read', args: { file: 'source.pdf' } } })
-      assert.equal(binary.structuredContent.project, 'bound-project')
+      assert.ok(!commands.includes('file.read'), 'the gateway must leave file reading to the Agent host')
       const importHelp = await client.callTool({ name: 'tylina', arguments: { command: 'help', args: { command: 'document.import' } } })
-      assert.ok(!importHelp.structuredContent.inputSchema.required.includes('expectedSourceSha256'))
+      assert.ok(!('expectedSourceSha256' in importHelp.structuredContent.inputSchema.properties))
       const imported = await client.callTool({ name: 'tylina', arguments: { command: 'document.import', args: {
-        source: 'source.pdf', destination: 'source.md', expectedDestinationSha256: null
+        source: 'source.pdf', destination: 'source.md'
       } } })
       assert.equal(imported.structuredContent.project, 'bound-project')
       assert.deepEqual(calls.at(-1), { name: 'tylina_import_document', input: {
-        source: 'source.pdf', destination: 'source.md', expectedDestinationSha256: null, allowIncomplete: false
+        source: 'source.pdf', destination: 'source.md', allowIncomplete: false
       } })
-      expectedCalls += 2
+      expectedCalls += 1
     }
     if (commands.includes('image.search')) {
       const searchHelp = await client.callTool({ name: 'tylina', arguments: {
@@ -106,19 +102,15 @@ test(`${mode}: real HTTP MCP discovers the shared tools, instructions and images
       const imported = await client.callTool({ name: 'tylina', arguments: {
         command: 'image.import', args: {
           id: '93d7039b-2a78-41d0-b122-423e428e91ce',
-          expectedMetadataSha256: 'a'.repeat(64),
           licensePolicy: 'adaptable',
-          destination: 'assets/diagram.png',
-          expectedDestinationSha256: null
+          destination: 'assets/diagram.png'
         }
       } })
       assert.equal(imported.structuredContent.project, 'bound-project')
       assert.deepEqual(calls.at(-1), { name: 'tylina_import_image', input: {
         id: '93d7039b-2a78-41d0-b122-423e428e91ce',
-        expectedMetadataSha256: 'a'.repeat(64),
         licensePolicy: 'adaptable',
-        destination: 'assets/diagram.png',
-        expectedDestinationSha256: null
+        destination: 'assets/diagram.png'
       } })
       expectedCalls += 2
     }

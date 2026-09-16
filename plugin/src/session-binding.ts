@@ -21,7 +21,7 @@ export function createSessionBinder(workspaces: ReturnType<typeof createHarnessW
       'Other filesystem tools and scripts use the Harness working directory and their edits arrive as external changes. ' +
       'Do not infer that a disconnected tool completed or retry an uncertain write without inspecting the current document.'
     signal.throwIfAborted()
-    const execute = withWorkspaceToolContext(call, path, skillsRootPath)
+    const execute = withWorkspaceToolContext(call, path)
     const pending = new Set<ReturnType<EditorToolCaller>>()
     const invoke: EditorToolCaller = (name, input, callerSignal) => {
       const task = Promise.resolve().then(() => execute(name, input, AbortSignal.any([signal, callerSignal])))

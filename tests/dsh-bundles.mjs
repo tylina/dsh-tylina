@@ -257,8 +257,12 @@ for (const mode of modes) {
     phase = 'document-flow'
     const info = (await probeRequest({ name: 'tylina_workspace_info' })).value.structuredContent
     assert.equal(info.root, project)
-    await access(join(info.skillsRoot, 'typst-slides/scripts/rotate_images.py'))
-    assert.match(await readFile(join(info.skillsRoot, 'typst-slides/SKILL.md'), 'utf8'), /Typst/)
+    assert.equal(info.skillsRoot, undefined)
+    const skill = await probeRequest({ name: 'tylina_read_skill_resource', input: {
+      path: 'typst-slides/SKILL.md'
+    } })
+    assert.equal(skill.isError, false, JSON.stringify(skill))
+    assert.match(skill.value.structuredContent.content, /Typst/)
     await expect.poll(readMain).toBe(source)
     await menu('Format', 'Format Document')
     await expect.poll(readMain).toContain('#let title = "Tylina in dsh"')

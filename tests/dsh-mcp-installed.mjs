@@ -70,18 +70,9 @@ export async function verifyInstalledMcp({
 
     mark('import')
     const importDestination = 'output/mcp/imported.md'
-    const inspectedImport = await call('tylina_import_document', {
-      source: 'source.pdf',
-      destination: importDestination,
-      expectedDestinationSha256: null,
-      allowIncomplete: false
-    })
-    assert.equal(inspectedImport.structuredContent.status, 'source-hash-required')
     const imported = await call('tylina_import_document', {
       source: 'source.pdf',
-      expectedSourceSha256: inspectedImport.structuredContent.sourceSha256,
       destination: importDestination,
-      expectedDestinationSha256: null,
       allowIncomplete: false
     })
     assert.equal(imported.structuredContent.status, 'written')
@@ -115,7 +106,9 @@ export async function verifyInstalledMcp({
         else assert.equal(bytes.subarray(0, 4).toString('hex'), '504b0304')
       }
     }
-    assert.match(await readFile(join(info.skillsRoot, 'typst-slides/SKILL.md'), 'utf8'), /Typst/)
+    const skill = await call('tylina_read_skill_resource', { path: 'typst-slides/SKILL.md' })
+    assert.equal(skill.structuredContent.available, true)
+    assert.match(skill.structuredContent.content, /Typst/)
     const templates = await call('tylina_list_templates', { query: 'amber', limit: 10 })
     assert.ok(templates.structuredContent.templates.some((entry) => entry.spec.startsWith('tylina:slides/')))
     await verifyEditAnimation({ frame, expect, mark,

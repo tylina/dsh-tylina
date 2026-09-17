@@ -27,6 +27,7 @@ export const sdkAliases = Object.fromEntries([
   ['client', 'dist/client.js'],
   ['node', 'dist/node.js'],
   ['protocol', 'dist/protocol.js'],
+  ['core-skills', 'dist/core-skills.js'],
   ['tools', 'dist/tools.js'],
   ['tool-names.json', 'tool-names.json']
 ].map(([entry, path]) => {

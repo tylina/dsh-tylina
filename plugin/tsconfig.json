@@ -2,6 +2,10 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "jsx": "react-jsx",
+    "paths": {
+      "tylina-sdk/core-skills": ["../../../packages/sdk/src/entries/core-skills.ts"],
+      "tylina-sdk/tools": ["../../../packages/sdk/src/entries/tools.ts"]
+    },
     "types": [
       "node"
     ]

@@ -4,6 +4,8 @@ import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-host-webserver'
 import type {} from '@deepseek-ai/dsh-client-connection'
 import type { LspProcessOptions } from 'tylina-sdk/node'
+import { createNodeCoreSkillCollectionRuntime } from 'tylina-sdk/core-skills'
+import { dshHomePath } from '@deepseek-ai/dsh-home-paths'
 import { createAssetHandler } from './assets'
 import { createRuntimeSocket } from './socket'
 import { registerTylinaSkills } from './skills'
@@ -24,7 +26,23 @@ export async function apply(ctx: Context, config: Config = {}): Promise<void> {
   const mode = config.mode ?? 'wasm'
   if (mode !== 'wasm' && mode !== 'native') throw new Error('Tylina runtime must be wasm or native')
   if (mode === 'native' && (!config.sidecar || !config.languageServer)) throw new Error('The native bundle must supply both Tinymist executables')
-  registerTylinaSkills(ctx, skillsRoot)
+  const coreSkills = createNodeCoreSkillCollectionRuntime({
+    packagedSkillsRootPath: skillsRoot,
+    collectionsDirPath: dshHomePath('profiles', 'tylina', 'core-skills'),
+    tylinaVersion: version,
+    enabled: true
+  })
+  const activeSkillsRoot = coreSkills.selection.skillsRootPath
+  ctx.effect(() => {
+    const timer = setTimeout(() => {
+      void coreSkills.checkForUpdate().catch(() => undefined)
+    }, 4_000)
+    return () => {
+      clearTimeout(timer)
+      coreSkills.dispose()
+    }
+  })
+  registerTylinaSkills(ctx, activeSkillsRoot)
   const assets = await createAssetHandler(fileURLToPath(new URL('./web/', import.meta.url)), {
     mode, ...(mode === 'native' ? { endpoint: '/tylina/runtime' } : {})
   }, webAssetRoots)
@@ -38,7 +56,7 @@ export async function apply(ctx: Context, config: Config = {}): Promise<void> {
     const workspaces = createHarnessWorkspaces(ctx, mode)
     const mcp = createHarnessMcpEndpoints({ version, requestRejection: (request) => ctx.connection.requestRejection(request) })
     const editors = createEditorSocket({ authorize: (request) => ctx.connection.requestRejection(request),
-      bind: createSessionBinder(workspaces, skillsRoot, mcp) })
+      bind: createSessionBinder(workspaces, activeSkillsRoot, mcp) })
     const unregisterMcp = ctx.webServer.register({ kind: 'prefix', path: '/tylina/mcp', handler: mcp.handle })
     const unregisterProjects = ctx.webServer.register({ kind: 'exact', path: '/tylina/project', async handler(request, response) {
       const rejection = ctx.connection.requestRejection(request)

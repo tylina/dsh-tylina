@@ -22,8 +22,8 @@ importers:
         specifier: 7.0.6
         version: 7.0.6
       tylina-web-assets:
-        specifier: 0.4.21
-        version: 0.4.21
+        specifier: 0.15.0
+        version: 0.15.0
 
   bundle-native:
     dependencies:
@@ -43,8 +43,8 @@ importers:
         specifier: ^0.18.0
         version: 0.18.0(dafc22554809c366964d5771706df681)
       tylina-web-assets:
-        specifier: 0.4.21
-        version: 0.4.21
+        specifier: 0.15.0
+        version: 0.15.0
       ws:
         specifier: ^8.18.3
         version: 8.21.3
@@ -60,23 +60,23 @@ importers:
         version: 6.0.3
     optionalDependencies:
       tylina-native-darwin-arm64:
-        specifier: 0.4.5
-        version: 0.4.5
+        specifier: 0.15.0
+        version: 0.15.0
       tylina-native-darwin-x64:
-        specifier: 0.4.5
-        version: 0.4.5
+        specifier: 0.15.0
+        version: 0.15.0
       tylina-native-linux-arm64:
-        specifier: 0.4.5
-        version: 0.4.5
+        specifier: 0.15.0
+        version: 0.15.0
       tylina-native-linux-x64:
-        specifier: 0.4.5
-        version: 0.4.5
+        specifier: 0.15.0
+        version: 0.15.0
       tylina-native-win32-arm64:
-        specifier: 0.4.5
-        version: 0.4.5
+        specifier: 0.15.0
+        version: 0.15.0
       tylina-native-win32-x64:
-        specifier: npm:@orangex4/tylina-native-win32-x64@0.4.5
-        version: '@orangex4/tylina-native-win32-x64@0.4.5'
+        specifier: npm:@orangex4/tylina-native-win32-x64@0.15.0
+        version: '@orangex4/tylina-native-win32-x64@0.15.0'
 
   bundle-wasm:
     dependencies:
@@ -96,8 +96,8 @@ importers:
         specifier: ^0.18.0
         version: 0.18.0(dafc22554809c366964d5771706df681)
       tylina-web-assets:
-        specifier: 0.4.21
-        version: 0.4.21
+        specifier: 0.15.0
+        version: 0.15.0
       ws:
         specifier: ^8.18.3
         version: 8.21.3
@@ -215,11 +215,11 @@ importers:
         specifier: 18.3.1
         version: 18.3.1(react@18.3.1)
       tylina-sdk:
-        specifier: 0.4.6
-        version: 0.4.6
+        specifier: 0.15.0
+        version: 0.15.0
       tylina-web-assets:
-        specifier: 0.4.21
-        version: 0.4.21
+        specifier: 0.15.0
+        version: 0.15.0
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -1210,8 +1210,83 @@ packages:
     resolution: {integrity: sha512-YhHWdHfpFMQfd0prsEnxKeS3Qz3ytIGmsS0sth4KDjnacIT7hxk6hXHkJ9KysxlkvTM+WZAtQbbcUhdoP4Hvtw==}
     engines: {node: '>=20'}
 
-  '@orangex4/tylina-native-win32-x64@0.4.5':
-    resolution: {integrity: sha512-JE+Y4ggTZXf21z8HAbOTd2HVFHtu5qTmMLFx7HX6WLhwd4EfbSrpkpEb6dW0RPmwbHK4jU3ybot3MnOuo6bs7A==}
+  '@napi-rs/canvas-android-arm64@1.0.9':
+    resolution: {integrity: sha512-4LGXk2/0HVzE29K8SzML5WubgCp++B1FH3qgl35XmSZE+lLdr6P9VRQEnZ0MCLZMTSuJP41yyhtoiVNEuvrTIA==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [android]
+
+  '@napi-rs/canvas-darwin-arm64@1.0.9':
+    resolution: {integrity: sha512-YNdfLBzY0W/Pep9fo2L6RmoNlNksnn05LRnX66W63R3ij58S25QOTcjdtEt2v8+PnCESzqZsYzUo+QPeIR44NA==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@napi-rs/canvas-darwin-x64@1.0.9':
+    resolution: {integrity: sha512-ceZQSknTEcy3dOXoekv59LTCkXjvnLsq+VW5PeNNDHEPQbRS5Ervkm1EaDa7WLAjiYWMLuSQTRTHao1dEX4prg==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@napi-rs/canvas-linux-arm-gnueabihf@1.0.9':
+    resolution: {integrity: sha512-XhfI0Wwv4llhd6nnWDtY3kQKjq0r+y1i91PlJlJI24ag2U9WrnwbG1qS3+fDLEyouwEVFchiKkTEHozK+5iUNA==}
+    engines: {node: '>= 10'}
+    cpu: [arm]
+    os: [linux]
+
+  '@napi-rs/canvas-linux-arm64-gnu@1.0.9':
+    resolution: {integrity: sha512-012oiYtKaE7i9oxc8q7nraT7kDOpLcaCmFLzVe9Ty34RHDdoDzbWLrVh827CNxYh/EADX1eSikA3ymLjo/nNuw==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  '@napi-rs/canvas-linux-arm64-musl@1.0.9':
+    resolution: {integrity: sha512-Ls5UWYFFn63casTZEczbeyEg3vRDRkv9lscuGwfchtY5yLLQhgOB8SN4YGxmfJ5vTaBwZ2YUxBS3NtmjJmFXdA==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [musl]
+
+  '@napi-rs/canvas-linux-riscv64-gnu@1.0.9':
+    resolution: {integrity: sha512-hLKEGxV7ZiRHqndePTokgDMdBlo/rDfzg7P4p4QIv9pUhuYobnu3R2NIFLCRghG0nwfo+s2sw+c1xZFeCmEAsw==}
+    engines: {node: '>= 10'}
+    cpu: [riscv64]
+    os: [linux]
+    libc: [glibc]
+
+  '@napi-rs/canvas-linux-x64-gnu@1.0.9':
+    resolution: {integrity: sha512-6kaz3w0QMy77PDWk6rJ1ksIihdad3qzEyX2o2oGT8GwCaypfT5mhjr8buOO5hstyLxcWXDScuz56RsINLtBPIQ==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  '@napi-rs/canvas-linux-x64-musl@1.0.9':
+    resolution: {integrity: sha512-xrGvmS3v55hmZ86ls/kBLVNMUTYio3f6Ik0DireemG994VfPAwiA3ZXA0Uf1bByctkB3NQ1Sfb+H5bkdUnnzfQ==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+    libc: [musl]
+
+  '@napi-rs/canvas-win32-arm64-msvc@1.0.9':
+    resolution: {integrity: sha512-yjmVS3ArZeRVCP7jqbPq4rpZa/BhTeI7ELE2XqJg3snICQBDevLZyArxswHkiTnT34KRic33/4fLirrHI+SY8A==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@napi-rs/canvas-win32-x64-msvc@1.0.9':
+    resolution: {integrity: sha512-QlSYQdMQslB81nlABo9wNfQ6npFhE7/O+saCZdqVGueGanyRk4jCogD5EwQenfP3kIq9e+mm6GreQBjX5MrA8g==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [win32]
+
+  '@napi-rs/canvas@1.0.9':
+    resolution: {integrity: sha512-QviPdJImDi/jMAvBfqaw+19BndMd/sizXVW3NnpMd3VJGz++QXkOHcP9kWR/smHG0hNjHeyuHFyrx/5lD0oNcQ==}
+    engines: {node: '>= 10'}
+
+  '@orangex4/tylina-native-win32-x64@0.15.0':
+    resolution: {integrity: sha512-Poj+pLuUPYslUfIDq2pco3Ve7yATDjBF/0EvozPRrnMDKx2XXD62vRqO8iAvmKT49lwv9boHO0udHo+CVpAK5Q==}
     cpu: [x64]
     os: [win32]
 
@@ -2093,75 +2168,75 @@ packages:
   tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
 
-  tylina-font-assets-10@0.4.1:
-    resolution: {integrity: sha512-j8c6e/XkhTv9rEFCE5sbwVnaird5sdhc8RxUQrD6EA0u1so9ic8t/tQBZG4+Qrl0E1Pfnl0auKIiz/C0m1rdrw==}
+  tylina-font-assets-10@0.15.0:
+    resolution: {integrity: sha512-WL7sJDi6ooxqLl+w0/muj503mf+KmUwUMMrZkjU4ML0JGG5bm2JJpSI+sqEQadI2vsWPAAvVtMDK1CC8jE5YRg==}
 
-  tylina-font-assets-11@0.4.1:
-    resolution: {integrity: sha512-04KY/mNZHoybDoifqgOZk0Z8jf26DhktqikSyW9N/nAw7qB4aHeuJWP3Br8z5ZY8i76bxm+8c+tQ1xgzXtPQnw==}
+  tylina-font-assets-11@0.15.0:
+    resolution: {integrity: sha512-tQci9u0yK9fYrIO69H6Kd2bumAzYEQ5wFR32SIGywd8yDO/8prM7DGeBkD5s9CZQ6xVhOdQae9mr3W06GEkCQw==}
 
-  tylina-font-assets-12@0.4.1:
-    resolution: {integrity: sha512-zd5654Gu8F0gvP1SLwIpdCDYw64uajQY8ezJYc/sAbbwFYXI3uIeJTFbBUKvj3vRoWatKmhpODY0XdogkqUsvw==}
+  tylina-font-assets-12@0.15.0:
+    resolution: {integrity: sha512-2vSEzXVJjhNuiq/0Cc3+It7kIMwREBp3nnbv+LJtY+yMWHeZwfXY7sw0ttmPrM0uIWJuMKWQbHDqtN5VUvxJdw==}
 
-  tylina-font-assets-1@0.4.1:
-    resolution: {integrity: sha512-ZI86Co92XBgAOW+fmg/ASLFeeg5TC3PQmKJUK9BBNBfHXdBkjfmIJI7Dbm+CZJb39urDgOlDvRZJ9eaPA5fn/w==}
+  tylina-font-assets-1@0.15.0:
+    resolution: {integrity: sha512-PbnOqvNY7DxCD0SvOVjzycLplPQiqtI9AQGjWvD4QEWpVLWXqhs2TspvlM2HcllQQkMroPOPIv3DEi8Z31kQiQ==}
 
-  tylina-font-assets-2@0.4.1:
-    resolution: {integrity: sha512-oq5pxt7zl3zOnTBwu/eOYoSl/d8nAbgAc/bq3wR70wZFlg2eSO6IkdlP6rhfU097fTGl5mEvkhRMj+yrqlrXgQ==}
+  tylina-font-assets-2@0.15.0:
+    resolution: {integrity: sha512-zxThkllnn6QZon6+LaXCFZFHfnlUGdBns6snMPCcXGNEU99Iw9h96nFfad2UYdhZGibklKbTWQk/QXHQEzq1yg==}
 
-  tylina-font-assets-3@0.4.1:
-    resolution: {integrity: sha512-SQSGjb8fN2lkaPIwrYx1isORIf0f+wGO/qwhnntFIgNizpneT0PtPpDjUFIE386AUV7RdRxBPQMMpFW3lwu7tA==}
+  tylina-font-assets-3@0.15.0:
+    resolution: {integrity: sha512-gUtd17JiuDC1ftXndUbNJyNX8CxqrtPBWkCuolnk1Mv/xUjIU43hSCX9gViPSnSFlkbpB6tt3bs7+SjEXSJoUw==}
 
-  tylina-font-assets-4@0.4.1:
-    resolution: {integrity: sha512-ACUq8UxdHqhkSDpfkkKJa9ZGdLXI8GagNwJQCAWwv/jv8mD9sSWxSoyoLOcEltnVAA/59Fdyt7fMzkac9XEQ1g==}
+  tylina-font-assets-4@0.15.0:
+    resolution: {integrity: sha512-jX+p2yI5mF9XWAnbV9McW6l8MZ/YmptIvNhcu2IkvBHDYUdQHkDyS5X8Dqv+ebK0uEuUvfgjGf3+V8eDW8JAIg==}
 
-  tylina-font-assets-5@0.4.1:
-    resolution: {integrity: sha512-g0jsDeeWQmO5VpVNSDA0/iQYC9TlQoND0d8K8sGdMgCKG/6f0vd90nr6e/SAOzSnAvBSP5APPKPPP2JQveeSRg==}
+  tylina-font-assets-5@0.15.0:
+    resolution: {integrity: sha512-FWGbMuZTGrgT0pQ2XjKti5WngaD0PXs/FeH6fLT82mQif2KJm1SmUORvG23VtwDNQX6ev3QtwjPmwEHUEsCzrg==}
 
-  tylina-font-assets-6@0.4.1:
-    resolution: {integrity: sha512-mLWxWjbYrUQxHmZI5XMkrhNClDPtVDnnyUK/xtQl8hrYt+aa2j0XX+iMHL1MvKN6ksvAkAtJYJhelhKZ2CaB1Q==}
+  tylina-font-assets-6@0.15.0:
+    resolution: {integrity: sha512-ig8CUoF5VFxdAcrr670ow03YwqUxzHYnWTBtPhCfpOCdZl8OBwzdIqaiSFCFzTZATlzGj3k6PoEFdE7QankjGg==}
 
-  tylina-font-assets-7@0.4.1:
-    resolution: {integrity: sha512-lhMc77HZJXP4RO7IWlH45A2q1E4pZ1T/hMJAe6wZ1JI5Cb34JM5NJORMzBFatMDGBU6vh10K09xaPv1Rfki9GA==}
+  tylina-font-assets-7@0.15.0:
+    resolution: {integrity: sha512-BupIpOCYQ6t2Q1ef/GnzIS8zGh13+vy7FNxeCXB4GVLKxyTx6mlhUUoK7uVvnx9Wwyv6/AmjClfZuZggiDcEdQ==}
 
-  tylina-font-assets-8@0.4.1:
-    resolution: {integrity: sha512-02hYfXEwQZwb/CHpwcTYXqhfRHaRa/YVLEMO23YARJIdlvLgfyPK0zmuYhw4JNVylEgpPBQK8ubCfzTtFm1wcw==}
+  tylina-font-assets-8@0.15.0:
+    resolution: {integrity: sha512-yGaDbPkdZ3usASEyZsokRiKGe0DW3nJr+aLo9RPzAGuJ/9cYPoH+kl4+pBaMirDLwh1oY9CuqHT61t+y/bOnzQ==}
 
-  tylina-font-assets-9@0.4.1:
-    resolution: {integrity: sha512-Yvclj2dQT6jLbU+F2mef5L+5q93uGxOFtq8yZlgeKDtXAbN6FNLk9wrwUmF1i+G0vRtVWrV57vavJqSv998V7g==}
+  tylina-font-assets-9@0.15.0:
+    resolution: {integrity: sha512-l06OL5wpAf3eeS0NOV6+KymMJQ9kzmcxRSYuh/+AeSlncHv6vrY2eW62Fwr6z+WCBcODUzMWnSJiFtw7hEwlFw==}
 
-  tylina-native-darwin-arm64@0.4.5:
-    resolution: {integrity: sha512-1fcGVrOwRxXC9f9L0p4Pn2318LQkvDy10B8AXA3x7NP6zNvOeYB0JeJGrHEvio7SDI70VPSnHEQ/4rROGxSMwg==}
+  tylina-native-darwin-arm64@0.15.0:
+    resolution: {integrity: sha512-XlAOaJH9rqwRAhTlBGIWYThpUvB9TUjREuqZYoqefgTGXjTCAzg0lt6/XmeUC2pzPGHe136+oG5S+nqJkfMSsg==}
     cpu: [arm64]
     os: [darwin]
 
-  tylina-native-darwin-x64@0.4.5:
-    resolution: {integrity: sha512-gCvKmOuhwylcbW+fIy5OR+bIIKA5JRvk4/IXQwpOt17UTmy3AR2HwRJ9DsidXpTVa1G6lUofnyC5TXPL333CeQ==}
+  tylina-native-darwin-x64@0.15.0:
+    resolution: {integrity: sha512-6TXIzIw8VXaxHKa5rWWt/ZZRX794Vywt0ajV5tvo85GTh4iZrmqBIkd5zqmG0Gh0P5aPcOrwF1fbnW/5ZRRh+g==}
     cpu: [x64]
     os: [darwin]
 
-  tylina-native-linux-arm64@0.4.5:
-    resolution: {integrity: sha512-OGHy/yrXqFs7A+7np8Sof9KkFK1K7rw0ruJFNyZg2Dtv2LoGZfE9lRUmor1EFugI3ne15CUKxjrsGFwPrJjEmQ==}
+  tylina-native-linux-arm64@0.15.0:
+    resolution: {integrity: sha512-2t6kX3FHih9ZY5il/DSG7GErjauNNwEj3TJ316mL9g48KInL3h80FdBKUZN1KAmC1Kf2h79itdHcFFJN4Oy18g==}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
-  tylina-native-linux-x64@0.4.5:
-    resolution: {integrity: sha512-Hbhl6UAGe131PtPV+0CInp+tXz915UDmKu51vFJtMt35Vri4NSEkBeW9A2garulQvVUYqnfrDg9CLKgr4EHeGg==}
+  tylina-native-linux-x64@0.15.0:
+    resolution: {integrity: sha512-OmkeIShzF3Bjuay4IwVKfVV9ZwMM0AAtjB2jLJX41BmH8b90RKUXhPYwOZfTmLg9DIfq76as3ooJORoTzqKiBw==}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
 
-  tylina-native-win32-arm64@0.4.5:
-    resolution: {integrity: sha512-4XjkIlEZ2OIBgAdEkSk4Uiwh7FXCn5ooucX+FmKoHd7KpgIDA8cVck8Z7d/1jNsMp46/HM5Gdop5mljMSdnM6w==}
+  tylina-native-win32-arm64@0.15.0:
+    resolution: {integrity: sha512-WRh9O2u/OB/Y8TqkwVk3z86tf+52jZaNAcPsEPlHmNTBNiNxcZzC3TsnRo809yJXC5AgMOS+QLoLQx/J/hr3XA==}
     cpu: [arm64]
     os: [win32]
 
-  tylina-sdk@0.4.6:
-    resolution: {integrity: sha512-y/U9W3c/hHR9buFHVVIkBiW76JraBjK5VkwYCz6RVdx/oYxWpMfprEf5cx9jaYSb1x1eCykl6d2xCSoR3NqFOA==}
+  tylina-sdk@0.15.0:
+    resolution: {integrity: sha512-NAAsYMwSj6mvbDJ35XTHVGjRNnEJ9dO3BDLI2gl0kG7Hv0nr30tTkV7VkAW8tBPFokdu6eh67+B2t23Wc4GRLg==}
     hasBin: true
 
-  tylina-web-assets@0.4.21:
-    resolution: {integrity: sha512-4pDk0tJj/wtDO0+8RS8pKPkm3pg5QTszPVjvLyfWtoLn0gDinTG6po92gup9rqmbIvrUv0QhsZRK4ycYM0Xn9Q==}
+  tylina-web-assets@0.15.0:
+    resolution: {integrity: sha512-qzRr3bpbp90/gWSkJ8dYjv3yoCpnK94PNpgGq1g/fvsHmWtJQULx5HV8YRm3ULyj7FPv46unth71JD4YpnmUNg==}
 
   typescript@6.0.3:
     resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
@@ -3293,7 +3368,55 @@ snapshots:
       '@modelcontextprotocol/core': 2.0.0
       zod: 4.4.3
 
-  '@orangex4/tylina-native-win32-x64@0.4.5':
+  '@napi-rs/canvas-android-arm64@1.0.9':
+    optional: true
+
+  '@napi-rs/canvas-darwin-arm64@1.0.9':
+    optional: true
+
+  '@napi-rs/canvas-darwin-x64@1.0.9':
+    optional: true
+
+  '@napi-rs/canvas-linux-arm-gnueabihf@1.0.9':
+    optional: true
+
+  '@napi-rs/canvas-linux-arm64-gnu@1.0.9':
+    optional: true
+
+  '@napi-rs/canvas-linux-arm64-musl@1.0.9':
+    optional: true
+
+  '@napi-rs/canvas-linux-riscv64-gnu@1.0.9':
+    optional: true
+
+  '@napi-rs/canvas-linux-x64-gnu@1.0.9':
+    optional: true
+
+  '@napi-rs/canvas-linux-x64-musl@1.0.9':
+    optional: true
+
+  '@napi-rs/canvas-win32-arm64-msvc@1.0.9':
+    optional: true
+
+  '@napi-rs/canvas-win32-x64-msvc@1.0.9':
+    optional: true
+
+  '@napi-rs/canvas@1.0.9':
+    optionalDependencies:
+      '@napi-rs/canvas-android-arm64': 1.0.9
+      '@napi-rs/canvas-darwin-arm64': 1.0.9
+      '@napi-rs/canvas-darwin-x64': 1.0.9
+      '@napi-rs/canvas-linux-arm-gnueabihf': 1.0.9
+      '@napi-rs/canvas-linux-arm64-gnu': 1.0.9
+      '@napi-rs/canvas-linux-arm64-musl': 1.0.9
+      '@napi-rs/canvas-linux-riscv64-gnu': 1.0.9
+      '@napi-rs/canvas-linux-x64-gnu': 1.0.9
+      '@napi-rs/canvas-linux-x64-musl': 1.0.9
+      '@napi-rs/canvas-win32-arm64-msvc': 1.0.9
+      '@napi-rs/canvas-win32-x64-msvc': 1.0.9
+    optional: true
+
+  '@orangex4/tylina-native-win32-x64@0.15.0':
     optional: true
 
   '@playwright/test@1.63.0':
@@ -4477,64 +4600,66 @@ snapshots:
 
   tslib@2.8.1: {}
 
-  tylina-font-assets-10@0.4.1: {}
+  tylina-font-assets-10@0.15.0: {}
 
-  tylina-font-assets-11@0.4.1: {}
+  tylina-font-assets-11@0.15.0: {}
 
-  tylina-font-assets-12@0.4.1: {}
+  tylina-font-assets-12@0.15.0: {}
 
-  tylina-font-assets-1@0.4.1: {}
+  tylina-font-assets-1@0.15.0: {}
 
-  tylina-font-assets-2@0.4.1: {}
+  tylina-font-assets-2@0.15.0: {}
 
-  tylina-font-assets-3@0.4.1: {}
+  tylina-font-assets-3@0.15.0: {}
 
-  tylina-font-assets-4@0.4.1: {}
+  tylina-font-assets-4@0.15.0: {}
 
-  tylina-font-assets-5@0.4.1: {}
+  tylina-font-assets-5@0.15.0: {}
 
-  tylina-font-assets-6@0.4.1: {}
+  tylina-font-assets-6@0.15.0: {}
 
-  tylina-font-assets-7@0.4.1: {}
+  tylina-font-assets-7@0.15.0: {}
 
-  tylina-font-assets-8@0.4.1: {}
+  tylina-font-assets-8@0.15.0: {}
 
-  tylina-font-assets-9@0.4.1: {}
+  tylina-font-assets-9@0.15.0: {}
 
-  tylina-native-darwin-arm64@0.4.5:
+  tylina-native-darwin-arm64@0.15.0:
     optional: true
 
-  tylina-native-darwin-x64@0.4.5:
+  tylina-native-darwin-x64@0.15.0:
     optional: true
 
-  tylina-native-linux-arm64@0.4.5:
+  tylina-native-linux-arm64@0.15.0:
     optional: true
 
-  tylina-native-linux-x64@0.4.5:
+  tylina-native-linux-x64@0.15.0:
     optional: true
 
-  tylina-native-win32-arm64@0.4.5:
+  tylina-native-win32-arm64@0.15.0:
     optional: true
 
-  tylina-sdk@0.4.6:
+  tylina-sdk@0.15.0:
     dependencies:
       cross-spawn: 7.0.6
       zod: 4.4.3
+    optionalDependencies:
+      '@napi-rs/canvas': 1.0.9
 
-  tylina-web-assets@0.4.21:
+  tylina-web-assets@0.15.0:
     dependencies:
-      tylina-font-assets-1: 0.4.1
-      tylina-font-assets-10: 0.4.1
-      tylina-font-assets-11: 0.4.1
-      tylina-font-assets-12: 0.4.1
-      tylina-font-assets-2: 0.4.1
-      tylina-font-assets-3: 0.4.1
-      tylina-font-assets-4: 0.4.1
-      tylina-font-assets-5: 0.4.1
-      tylina-font-assets-6: 0.4.1
-      tylina-font-assets-7: 0.4.1
-      tylina-font-assets-8: 0.4.1
-      tylina-font-assets-9: 0.4.1
+      tylina-font-assets-1: 0.15.0
+      tylina-font-assets-10: 0.15.0
+      tylina-font-assets-11: 0.15.0
+      tylina-font-assets-12: 0.15.0
+      tylina-font-assets-2: 0.15.0
+      tylina-font-assets-3: 0.15.0
+      tylina-font-assets-4: 0.15.0
+      tylina-font-assets-5: 0.15.0
+      tylina-font-assets-6: 0.15.0
+      tylina-font-assets-7: 0.15.0
+      tylina-font-assets-8: 0.15.0
+      tylina-font-assets-9: 0.15.0
 
   typescript@6.0.3: {}
 

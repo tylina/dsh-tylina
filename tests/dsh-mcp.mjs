@@ -115,7 +115,9 @@ test(`${mode}: real HTTP MCP discovers the shared tools, instructions and images
     assert.equal(result.structuredContent.project, 'bound-project')
     assert.equal(result.content[1].mimeType, 'image/png')
     expectedCalls++
-    assert.deepEqual(calls.at(-1), { name: 'tylina', input: { command: 'render.page', args: { page: 1 } } })
+    assert.deepEqual(calls.at(-1), { name: 'tylina', input: {
+      command: 'render.page', args: { page: 1, ppi: 144 }
+    } })
     assert.equal(calls.length, expectedCalls)
     await assert.rejects(client.callTool({ name: 'tylina_write_file', arguments: { file: 'main.typ' } }), /not found/i)
     const invalid = await client.callTool({ name: 'tylina', arguments: {

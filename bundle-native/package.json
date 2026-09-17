@@ -32,7 +32,7 @@
     "@deepseek-ai/dsh-llm": "0.1.2-rc.1",
     "@deepseek-ai/dsh-skill-filesystem": "0.1.2-rc.1",
     "ws": "^8.18.3",
-    "tylina-web-assets": "0.15.0"
+    "tylina-web-assets": "0.15.1"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -64,12 +64,12 @@
   },
   "homepage": "https://github.com/tylina/dsh-tylina#readme",
   "optionalDependencies": {
-    "tylina-native-darwin-arm64": "0.15.0",
-    "tylina-native-darwin-x64": "0.15.0",
-    "tylina-native-linux-x64": "0.15.0",
-    "tylina-native-linux-arm64": "0.15.0",
-    "tylina-native-win32-x64": "npm:@orangex4/tylina-native-win32-x64@0.15.0",
-    "tylina-native-win32-arm64": "0.15.0"
+    "tylina-native-darwin-arm64": "0.15.1",
+    "tylina-native-darwin-x64": "0.15.1",
+    "tylina-native-linux-x64": "0.15.1",
+    "tylina-native-linux-arm64": "0.15.1",
+    "tylina-native-win32-x64": "npm:@orangex4/tylina-native-win32-x64@0.15.1",
+    "tylina-native-win32-arm64": "0.15.1"
   },
   "peerDependenciesMeta": {
     "dsh-better-sidebar": {

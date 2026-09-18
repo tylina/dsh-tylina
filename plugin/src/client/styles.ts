@@ -48,6 +48,29 @@ ${projectPickerCss}
 .tylina-dsh-mcp p { margin:12px 0; }
 .tylina-dsh-mcp button.tylina-dsh-mcp-copy { width:auto; height:auto; margin:16px 0 0 auto; display:flex; gap:8px;
   padding:6px 12px; border:1px solid var(--dsw-alias-border-l2,#ddd); font:inherit; }
+.tylina-tool-card { min-width:0; color:var(--dsw-alias-label-primary,#202124); font:14px/1.5 system-ui,sans-serif; }
+.tylina-tool-summary { list-style:none; min-width:0; height:24px; display:flex; align-items:center; cursor:pointer; }
+.tylina-tool-summary::-webkit-details-marker { display:none; }
+.tylina-tool-icon { width:16px; height:16px; margin-right:6px; display:grid; place-items:center; flex:none; }
+.tylina-tool-title { color:var(--dsw-alias-label-secondary,#5f6673); flex:none; }
+.tylina-tool-separator { width:2px; height:2px; margin:0 8px; border-radius:50%; flex:none;
+  background:var(--dsw-alias-label-caption,#9399a4); }
+.tylina-tool-description { min-width:0; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  color:var(--dsw-alias-label-tertiary,#777f8d); }
+.tylina-tool-state { width:7px; height:7px; margin-left:8px; border-radius:50%; flex:none; background:#2b8a57; }
+.tylina-tool-card[data-state=running] .tylina-tool-state { background:#4b7fbd; }
+.tylina-tool-card[data-state=error] .tylina-tool-state { background:#c84747; }
+.tylina-tool-card[data-state=stopped] .tylina-tool-state { background:#ad792d; }
+.tylina-tool-details { margin:4px 0 6px 22px; display:flex; flex-direction:column; gap:8px; }
+.tylina-tool-details section { min-width:0; border:1px solid var(--dsw-alias-border-l2,#ddd); border-radius:8px;
+  background:var(--dsw-alias-markdown-code-block,#f6f7f9); overflow:hidden; }
+.tylina-tool-details section > strong { display:block; padding:5px 9px; color:var(--dsw-alias-label-caption,#747b87);
+  border-bottom:1px solid var(--dsw-alias-border-l2,#ddd); font-size:11px; text-transform:uppercase; }
+.tylina-tool-details pre { max-height:240px; margin:0; padding:8px 9px; overflow:auto; white-space:pre-wrap;
+  overflow-wrap:anywhere; color:var(--dsw-alias-label-secondary,#5f6673); font:12px/1.5 ui-monospace,SFMono-Regular,monospace; }
+.tylina-tool-details p { margin:0; padding:8px 9px; color:var(--dsw-alias-label-secondary,#5f6673); }
+.tylina-tool-inspect { align-self:flex-start; padding:2px 8px; border:1px solid var(--dsw-alias-border-l2,#ddd);
+  border-radius:999px; background:var(--dsw-alias-bg-base,#fff); color:inherit; font:11px/1.5 system-ui,sans-serif; cursor:pointer; }
 @media(max-width:899px) { body[data-tylina-docked] { width:100%; } .tylina-dsh-panel { border:0; } }
 @media(prefers-reduced-motion:no-preference) {
   .tylina-dsh-bar button[aria-busy=true] svg { animation:tylina-dsh-reconnect 1.2s linear infinite; }

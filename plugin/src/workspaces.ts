@@ -4,13 +4,31 @@ import { isAbsolute, relative, sep, extname } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import type { FileSystem } from '@deepseek-ai/dsh-fs'
 import type {} from '@deepseek-ai/dsh-api-session-controller'
-import { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import { checkWorkspacePath, createNodeWorkspacePool, nativeWorkspacePath, requireWorkspaceRelativePath } from 'tylina-sdk/node'
 import { decodeWorkspace, encodeWorkspace, type WorkspaceWire } from './workspace-wire'
 import { withAgentServices } from './agent-services'
 import { createHarnessFileSystem } from './file-system'
 import { createWorkspaceViews } from './workspace-views'
 import type { EmbeddedWorkspaceRemovals } from 'tylina-sdk/client'
+
+type StoredSessionHeader = { cwd?: string }
+type SessionPersistenceBridge = {
+  stat?: (id: string, options?: { signal?: AbortSignal }) => Promise<{ header: StoredSessionHeader } | undefined>
+  inspect?: (id: string, signal?: AbortSignal) => Promise<{ meta: StoredSessionHeader } | undefined>
+}
+const sessionId = (id: string) => id as SessionId
+
+async function readStoredSessionHeader(
+  persistence: SessionPersistenceBridge | undefined,
+  sessionId: string,
+  signal?: AbortSignal
+): Promise<StoredSessionHeader | undefined> {
+  if (!persistence) return undefined
+  if (typeof persistence.stat === 'function') return (await persistence.stat(sessionId, { signal }))?.header
+  if (typeof persistence.inspect === 'function') return (await persistence.inspect(sessionId, signal))?.meta
+  throw new Error('This Harness version does not expose compatible saved-session metadata')
+}
 
 /** A provider-owned process path is usable by Node only with an explicit identity host mapping. */
 export async function resolveHarnessProject(fs: FileSystem, cwd: string, project: string, signal?: AbortSignal): Promise<string> {
@@ -42,10 +60,10 @@ export function createHarnessWorkspaces(ctx: Context, mode: 'wasm' | 'native') {
     const target = await fs.resolve(path, { signal })
     return { fileSystem: createHarnessFileSystem(fs, target), path }
   }
-  const resolve = async (sessionId: string, project: string, signal?: AbortSignal) => {
-    identify(sessionId, project)
-    const live = ctx.agents?.get(SessionId(sessionId))
-    const result = live ? { agent: live } : await ctx.sessionController.resolveAgent(SessionId(sessionId))
+  const resolve = async (session: string, project: string, signal?: AbortSignal) => {
+    identify(session, project)
+    const live = ctx.agents?.get(sessionId(session))
+    const result = live ? { agent: live } : await ctx.sessionController.resolveAgent(sessionId(session))
     if ('error' in result) throw new Error(result.error.message)
     signal?.throwIfAborted()
     const { agent } = result
@@ -53,15 +71,15 @@ export function createHarnessWorkspaces(ctx: Context, mode: 'wasm' | 'native') {
       projectFor(context.fs, agent.session.header.cwd ?? '', project, signal))
     return { ...owner, agent }
   }
-  const open = async (sessionId: string, project: string, signal?: AbortSignal) => {
-    identify(sessionId, project)
-    const agent = ctx.agents?.get(SessionId(sessionId))
+  const open = async (session: string, project: string, signal?: AbortSignal) => {
+    identify(session, project)
+    const agent = ctx.agents?.get(sessionId(session))
     if (agent) return withAgentServices(agent, ['fs'], (context) =>
       projectFor(context.fs, agent.session.header.cwd ?? '', project, signal))
     // Reading a saved conversation's files is independent of its Agent lifecycle/ownership.
-    const attached = ctx.sessions.get(SessionId(sessionId))
-    const persistence = ctx.get('sessionPersistence') as { inspect(id: string): Promise<{ meta: { cwd?: string } }> } | undefined
-    const header = attached?.header ?? (await persistence?.inspect(sessionId))?.meta
+    const attached = ctx.sessions.get(sessionId(session))
+    const persistence = ctx.get('sessionPersistence') as SessionPersistenceBridge | undefined
+    const header = attached?.header ?? await readStoredSessionHeader(persistence, session, signal)
     if (!header?.cwd) throw new Error('This Harness session has no accessible working directory')
     signal?.throwIfAborted()
     return projectFor(ctx.fs, header.cwd, project, signal)

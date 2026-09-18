@@ -67,9 +67,15 @@ export function apply(ctx) {
       if (input.action === 'compact') {
         if (agent.status !== 'idle') throw new Error('Only a settled test conversation may be compacted')
         const nodes = [...agent.session.surface.nodes]
+        const eventBySeq = new Map(agent.session.snapshotEvents().map((event) => [event.seq, event]))
+        const replaceable = nodes.filter((seq) => eventBySeq.get(seq)?.type !== 'system/message')
+        if (!replaceable.length) throw new Error('The acceptance conversation has no compactable messages')
+        const range = Number(agent.session.header.version) >= 3
+          ? { op: 'replace', startSeq: replaceable[0], endSeq: replaceable.at(-1) }
+          : { op: 'replace', start: replaceable[0], end: replaceable.at(-1) }
         agent.session.append('user/message', createUserMessage({ source: { kind: 'plugin', plugin: 'tylina-acceptance', form: 'recall' },
           content: [{ type: 'text', text: 'The prior document task completed; continue using the current document.' }] }),
-        { surfaceOp: { op: 'replace', start: nodes[0], end: nodes.at(-1) }, sourceEventSeqs: nodes })
+        { surfaceOp: range, sourceEventSeqs: replaceable })
       }
       const tylinaContext = (message) => message.source.kind === 'plugin' && message.source.plugin === 'tylina'
       const value = ['turn', 'model', 'compact'].includes(input.action) ? { ...model.read(input.sessionId), status: agent.status }

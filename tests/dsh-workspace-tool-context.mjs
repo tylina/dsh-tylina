@@ -34,7 +34,11 @@ test('workspace info exposes the Harness provider root through the unified dispa
   const mapped = await call('tylina', input, new AbortController().signal)
   assert.deepEqual(calls, [{ name: 'tylina', input }])
   assert.deepEqual(mapped.structuredContent, { root: '/host/project', mainFile: 'main.typ' })
-  assert.deepEqual(JSON.parse(mapped.content[0].text), mapped.structuredContent)
+  assert.equal(mapped.content[0].text, [
+    'Workspace: /host/project',
+    'Main file: main.typ',
+    'Known files: ? Typst source(s), ? resource(s)'
+  ].join('\n'))
 
   const other = await call('tylina', { command: 'document.validate', args: {} }, new AbortController().signal)
   assert.equal(other, result, 'unrelated command results are unchanged')

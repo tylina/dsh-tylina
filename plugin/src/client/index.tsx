@@ -21,6 +21,7 @@ import { attachProjectLauncher, type ProjectLauncherOptions } from './window-lau
 import { readProjectWindow } from './window-record'
 import { McpConnectionButton } from './mcp-connection'
 import { useToolReconnect } from './use-tool-reconnect'
+import { registerTylinaToolView } from './tool-view'
 
 type Props = PropsRuntime<'sidebar.footer.action'> & PropsLocale<'tylina'> & { ctx: Context; integration: BetterSidebarIntegration }
 interface Project { sessionId: SessionId; project: string; entry?: string }
@@ -228,6 +229,7 @@ export function apply(ctx: Context): void {
   const integration = new BetterSidebarIntegration()
   ctx.effect(() => () => integration.dispose())
   registerBetterSidebar(ctx, integration)
+  registerTylinaToolView(ctx)
   ctx.effect(() => ctx.locale.register('tylina', { en, zh }))
   ctx.effect(() => {
     const style = document.createElement('style'); style.textContent = css

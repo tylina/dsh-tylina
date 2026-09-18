@@ -1,4 +1,4 @@
-import { readEditorSource, writeHarnessSource } from './dsh-source.mjs'
+import { readEditorSource, waitForEditorSource, writeHarnessSource } from './dsh-source.mjs'
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { spawn, execFile } from 'node:child_process'
@@ -28,7 +28,12 @@ const run = (...args) => {
   result.child.stdin?.end()
   return result
 }
+const dshBin = process.env.TYLINA_DSH_BIN || 'dsh'
+const { stdout: dshVersionOutput } = await run(dshBin, ['--version'], { maxBuffer: 2 ** 20 })
+const dshVersion = process.env.TYLINA_DSH_PACKAGE_VERSION ?? dshVersionOutput.match(/\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/u)?.[0]
+assert.ok(dshVersion, `Could not determine the package version behind ${dshBin}`)
 const betterSidebar = process.env.TYLINA_DSH_BETTER_SIDEBAR === '1'
+const betterSidebarVersion = process.env.TYLINA_DSH_BETTER_SIDEBAR_VERSION ?? '0.18.0'
 const modes = process.argv.slice(2).length ? process.argv.slice(2) : ['wasm', 'native']
 const installOptions = process.env.TYLINA_DSH_OFFLINE === '1' ? ['--offline'] : []
 const digest = async (path) => {
@@ -50,7 +55,7 @@ for (const mode of modes) {
   const source = '#let title="Tylina in dsh"\r\n= #title\r\n\r\nHello 世界'
   await writeFile(join(project, 'Plugin.typ'), source)
   await writeFile(join(project, 'source.pdf'), createPdf('Imported through DSH.'))
-  const archive = join(root, `release/${packageName}-${version}.tgz`)
+  const archive = process.env.TYLINA_DSH_BUNDLE_ARCHIVE ?? join(root, `release/${packageName}-${version}.tgz`)
   await access(archive)
   const candidates = {
     ...JSON.parse(process.env.TYLINA_DSH_PACKAGE_OVERRIDES ?? '{}'),
@@ -72,18 +77,18 @@ for (const mode of modes) {
       'packages:\n  - .\nnodeLinker: hoisted\nautoInstallPeers: false\noverrides:\n' +
       Object.entries(candidates).map(([name, path]) => `  ${JSON.stringify(name)}: ${JSON.stringify(`file:${path}`)}\n`).join(''))
   }
-  await run('dsh', ['plugin', '--profile', 'tylina', 'add', archive, ...installOptions], { env, maxBuffer: 2 ** 20 })
+  await run(dshBin, ['plugin', '--profile', 'tylina', 'add', archive, ...installOptions], { env, maxBuffer: 2 ** 20 })
   if (betterSidebar) {
     const configuration = join(home, 'profiles/tylina/pnpm-workspace.yaml')
     await writeFile(configuration, await readFile(configuration, 'utf8') + '\nallowBuilds:\n  node-pty: true\n')
-    await run('dsh', ['plugin', '--profile', 'tylina', 'add', 'dsh-better-sidebar@0.18.0', ...installOptions], { env, maxBuffer: 2 ** 20 })
+    await run(dshBin, ['plugin', '--profile', 'tylina', 'add', `dsh-better-sidebar@${betterSidebarVersion}`, ...installOptions], { env, maxBuffer: 2 ** 20 })
   }
   const probe = join(home, 'probe')
   await mkdir(probe)
   await cp(join(root, 'tests/dsh-probe.mjs'), join(probe, 'index.mjs'))
   await cp(join(root, 'tests/dsh-model-fixture.mjs'), join(probe, 'dsh-model-fixture.mjs'))
   await writeFile(join(probe, 'package.json'), JSON.stringify({ name: 'tylina-acceptance-probe', version: '1.0.0', type: 'module',
-    dependencies: { '@deepseek-ai/dsh-llm': '0.1.2-rc.1' },
+    dependencies: { '@deepseek-ai/dsh-llm': dshVersion },
     exports: './index.mjs', dsh: { bundle: { patch: './cordis.patch.yml' } } }))
   await writeFile(join(probe, 'cordis.patch.yml'), '- insert:\n    - id: tylina-acceptance\n      name: tylina-acceptance-probe\n')
   await run('pnpm', ['pack', '--pack-destination', home], { cwd: probe, env, maxBuffer: 2 ** 20 })
@@ -110,7 +115,7 @@ for (const mode of modes) {
         await digest(join(process.env.TYLINA_DSH_NATIVE_RUNTIME, 'runtime', name)), 'the test must install the candidate Native engine')
     }
   }
-  const server = spawn('dsh', ['--profile', 'tylina', '--host', '127.0.0.1', '--port', '0', '--no-open'], { env, cwd: project, stdio: ['ignore', 'pipe', 'pipe'] })
+  const server = spawn(dshBin, ['--profile', 'tylina', '--host', '127.0.0.1', '--port', '0', '--no-open'], { env, cwd: project, stdio: ['ignore', 'pipe', 'pipe'] })
   let output = ''
   let resolveUrl, rejectUrl
   const urlReady = new Promise((resolve, reject) => { resolveUrl = resolve; rejectUrl = reject })
@@ -244,11 +249,16 @@ for (const mode of modes) {
       const result = await command('workspace.save')
       assert.equal(result.isError, false, JSON.stringify(result))
       assert.equal(result.value.structuredContent.saved, true, JSON.stringify(result.value))
+      assert.deepEqual(result.content, [{ type: 'text', text: 'Workspace saved.' }],
+        'the installed Harness must render concise tool content instead of canonical JSON')
     }
     await expect.poll(async () => (await probeRequest({ action: 'catalog' })).filter((tool) => tool.name === 'tylina').length).toBe(1)
     const validated = await command('document.validate')
     assert.equal(validated.isError, false, JSON.stringify(validated))
     assert.equal(validated.value.structuredContent.valid, true)
+    assert.match(validated.content.find((part) => part.type === 'text')?.text ?? '', /^Document (?:is )?valid\b/iu)
+    assert.ok(!validated.content.some((part) => part.type === 'text' && part.text.includes('"valid"')),
+      'the installed Harness model result must not receive the legacy canonical JSON envelope')
     phase = 'installed-mcp'
     await verifyInstalledMcp({ page, frame, root, project, readMain, mode, expectedMissing, probeRequest,
       mark: (value) => { phase = `installed-mcp:${value}` } })
@@ -277,7 +287,10 @@ for (const mode of modes) {
     const splitView = await probeRequest({ name: 'tylina', input: { command: 'view.set', args: { target: 'mode', value: 'split' } } })
     assert.equal(splitView.isError, false)
     assert.equal(splitView.value.structuredContent.mode, 'split')
-    await frame.getByTestId('monaco-source-editor').click({ position: { x: 180, y: 12 } })
+    if (betterSidebar && await frame.getByTestId('tylina-root').getAttribute('data-workspace-sidebar-collapsed') !== 'true') {
+      await frame.getByRole('button', { name: 'Sidebar', exact: true }).click()
+    }
+    await frame.getByTestId('monaco-source-editor').click({ position: { x: 20, y: 12 } })
     await page.keyboard.press('ControlOrMeta+a')
     const selection = (await probeRequest({ name: 'tylina', input: { command: 'editor.state' } })).value.structuredContent
     assert.equal(selection.surface, 'source')
@@ -290,14 +303,14 @@ for (const mode of modes) {
     await expect.poll(readMain).toBe(edited)
     const agentEdited = edited + ' Agent tool'
     await writeHarnessSource(probeRequest, agentEdited)
-    await expect.poll(async () => (await readEditorSource(page, probeRequest)).text).toBe(agentEdited)
+    await waitForEditorSource(page, probeRequest, agentEdited, expect)
     await expect.poll(readMain).toBe(agentEdited)
     await menu('Edit', 'Undo'); await expect.poll(readMain).toBe(edited)
     await menu('Edit', 'Redo'); await expect.poll(readMain).toBe(agentEdited)
     const external = agentEdited + '\r\n\r\nExternal Harness edit'
     await requireCleanWorkspace()
     await writeHarnessSource(probeRequest, external)
-    await expect.poll(async () => (await readEditorSource(page, probeRequest)).text).toBe(external)
+    await waitForEditorSource(page, probeRequest, external, expect)
     await menu('Edit', 'Undo'); await expect.poll(readMain).toBe(agentEdited)
     await menu('Edit', 'Redo'); await expect.poll(readMain).toBe(external)
     await frame.getByRole('button', { name: 'Agent', exact: true }).click()
@@ -308,6 +321,7 @@ for (const mode of modes) {
     await expect(frame.locator('.workspaceAgentDock')).toHaveCount(0)
     const rendered = await command('render.page', { page: 1 })
     assert.equal(rendered.isError, false)
+    assert.match(rendered.content.find((part) => part.type === 'text')?.text ?? '', /^Rendered page(?:\s|:)/u)
     assert.ok(rendered.content.some((part) => part.type === 'image' && part.attachment?.attachmentId), 'the hidden live editor renders into real Harness attachments')
     await page.getByRole('button', { name: /^(打开 Tylina|Open Tylina)$/u }).click()
     await expect.poll(readMain).toBe(external)
@@ -361,6 +375,36 @@ for (const mode of modes) {
       const pdf = await readFile(join(project, 'output/Agent.pdf'))
       assert.equal(pdf.subarray(0, 5).toString(), '%PDF-')
     }
+    await page.reload()
+    const historySetup = page.getByRole('button', { name: /^(稍后配置|Set up later|Configure later)$/u })
+    const historyLauncher = page.getByRole('button', { name: /^(打开 Tylina|Open Tylina)$/u })
+    await expect.poll(async () => await historySetup.isVisible() || await historyLauncher.isVisible()).toBe(true)
+    if (await historySetup.isVisible()) await historySetup.click()
+    const latestToolGroup = page.getByRole('button', { name: /(?:tool calls|工具调用)/iu }).last()
+    await expect(latestToolGroup).toBeVisible()
+    await latestToolGroup.click()
+    const validationCard = page.locator('.tylina-tool-card').filter({ hasText: 'document.validate' }).last()
+    await expect(validationCard).toBeVisible()
+    await validationCard.locator('summary').click()
+    await expect(validationCard).toContainText(/Document (?:is )?valid/u)
+    assert.ok(!(await validationCard.innerText()).includes('"valid"'),
+      'the DSH card must present validation prose rather than canonical JSON')
+    const imageCard = page.locator('.tylina-tool-card').filter({ hasText: 'render.page' }).last()
+    await expect(imageCard).toBeVisible()
+    await imageCard.locator('summary').click()
+    await expect(imageCard).toContainText(/(?:Images returned: 1|返回图片：1 张)/u)
+    assert.ok(!(await imageCard.innerText()).includes('attachmentId'),
+      'the DSH card must summarize image receipts rather than printing attachment JSON')
+    assert.equal(
+      await page.locator('.tylina-tool-card').evaluateAll((cards) =>
+        cards.every((card) => card.closest('[data-turn-process-member="true"]') !== null)),
+      true,
+      'historical Tylina calls must remain members of the Agent process disclosure after reload'
+    )
+    await page.screenshot({ path: join(root, `.benchmarks/dsh-${mode}-tool-cards${betterSidebar ? '-better-sidebar' : ''}.png`) })
+    if (betterSidebar) await expect(historyLauncher).toHaveAttribute('aria-expanded', 'true')
+    else await historyLauncher.click()
+    await expect(frame.locator('.typst-doc')).toBeVisible({ timeout: 30_000 })
     if (env.TYLINA_DSH_LIVE_KEY) await verifyLiveModel({ page, frame, project, readMain, probeRequest, expect, errors, expectedMissing })
     page = await verifyWindowRecovery({ page, context, root, mode, sessionId, readMain, expect })
     await expect(page.locator('.tylina-dsh-error')).toHaveCount(0)
@@ -372,7 +416,8 @@ for (const mode of modes) {
       [], 'the host console must not contain application errors')
     assert.deepEqual(diagnostics.filter((entry) => entry.kind === 'request' && entry.error !== 'net::ERR_ABORTED'),
       [], 'retired request cancellation is expected; other network failures are not')
-    console.log(`PASS ${mode}: packed install, Agent loop, eval/import, PDF/PNG/SVG/PPTX export, ` +
+    console.log(`PASS ${mode} on DSH ${dshVersion}${betterSidebar ? ` with Better Sidebar ${betterSidebarVersion}` : ''}: ` +
+      'packed install, Agent loop, eval/import, PDF/PNG/SVG/PPTX export, ' +
       'disk saves, external Undo, image receipts, navigation, reload and disposal')
   } catch (error) {
     if (page) { const url = new URL(page.url()); console.error('Failed page:', url.origin + url.pathname); console.error((await page.locator('body').innerText().catch(() => '')).slice(0, 1800)) }

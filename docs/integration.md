@@ -72,7 +72,8 @@ Custom profiles must contain `@deepseek-ai/dsh-base` and `@deepseek-ai/dsh-web-a
 
 There are no install scripts, source-checkout requirements or compiler binary downloads.
 The platform runtime tarballs preserve executable permissions through pnpm's `publishConfig.executableFiles`.
-The integration currently targets the released Harness `0.1.2-rc.1` plugin contracts.
+The integration is verified against the released Harness `0.1.2-rc.1`, `0.1.5-rc.1`, and `0.1.5-rc.2`
+plugin contracts.
 
 ## Ownership
 
@@ -118,9 +119,10 @@ the project and Skill roots. Use the Harness file/Skill tools to read them and i
 `document.export` writes PDF, paged PNG or SVG, a visual-fidelity PPTX, or an experimental editable PPTX.
 The two PPTX modes preserve presenter notes and publish one exact destination file; they use the same compiled
 document model in the browser WASM and native bundles.
-`document.import` captures a hash-bound PDF, DOCX, PPTX or XLSX workspace file as conservative Markdown.
-The first hashless call returns binary metadata without parsing or writing. Scanned PDF pages require an explicit
-local OCR language policy or an explicit incomplete-output choice; both bundles use the same pinned Web assets.
+`document.import` captures one fixed PDF, DOCX, PPTX or XLSX workspace-file snapshot as conservative Markdown.
+Snapshot consistency stays inside the host adapter; the Agent supplies only source, destination and any explicit
+OCR or incomplete-output policy. Scanned PDF pages require an explicit local OCR language policy or an explicit
+incomplete-output choice; both bundles use the same pinned Web assets.
 Before a document tool executes, the editor receives pending filesystem changes, so validation and export
 observe the source just edited by the Harness. A refresh conflict is reported rather than validating old text.
 

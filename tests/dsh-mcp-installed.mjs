@@ -1,5 +1,5 @@
 import { verifyEditAnimation } from './edit-animation.mjs'
-import { readEditorSource, writeHarnessSource } from './dsh-source.mjs'
+import { waitForEditorSource, writeHarnessSource } from './dsh-source.mjs'
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
 import { readFile } from 'node:fs/promises'
@@ -57,7 +57,7 @@ export async function verifyInstalledMcp({
     mark('source-edit')
     await writeHarnessSource(probeRequest, source)
     const probe = async input => ({ isError: false, value: await client.callTool({ name: input.name, arguments: input.input }) })
-    await expect.poll(async () => (await readEditorSource(page, probe)).text).toBe(source)
+    await waitForEditorSource(page, probe, source, expect)
     await expect(frame.getByTestId('tylina-root')).toHaveAttribute('data-compile-status', 'success')
     await expect.poll(readMain).toBe(source)
     assert.equal((await call('document.validate')).structuredContent.valid, true)
@@ -119,7 +119,7 @@ export async function verifyInstalledMcp({
     assert.equal(preparedRestore.structuredContent.saved, true, JSON.stringify(preparedRestore))
     mark('restore')
     await writeHarnessSource(probeRequest, original)
-    await expect.poll(async () => (await readEditorSource(page, probe)).text).toBe(original)
+    await waitForEditorSource(page, probe, original, expect)
     await expect.poll(readMain).toBe(original)
     await expect(frame.getByTestId('external-edit-transition')).toHaveCount(0)
     await page.getByRole('button', { name: /^(重新连接 Agent 工具|Reconnect Agent tools)$/u }).click()

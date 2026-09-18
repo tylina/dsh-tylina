@@ -45,12 +45,15 @@ export function createModelFixture(ctx) {
           assert.ok(prior, 'the next model request contains the actual tool receipt')
           assert.ok(!prior.isError, JSON.stringify(prior.content))
         }
-        const value = () => JSON.parse(prior.content.filter((block) => block.type === 'text').map((block) => block.text).join('\n'))
+        const text = () => prior.content.filter((block) => block.type === 'text').map((block) => block.text).join('\n')
+        // The plugin projects older SDK JSON envelopes before they reach any supported
+        // Harness model loop, so every host version receives the same readable contract.
+        const lineValue = (label) => text().split('\n').find((line) => line.startsWith(`${label}: `))?.slice(label.length + 2)
         let name, input
         switch (run.step++) {
           case 0: name = 'tylina'; input = { command: 'workspace.info', args: {} }; break
           case 1:
-            run.file = join(value().root, 'Plugin.typ')
+            run.file = join(lineValue('Workspace'), 'Plugin.typ')
             name = 'read'; input = { file_path: run.file }; break
           case 2:
             // The Harness read receipt is line-numbered text; editing a unique literal
@@ -60,11 +63,13 @@ export function createModelFixture(ctx) {
               old_string: 'External Harness edit', new_string: `External Harness edit\r\n${run.marker}` }; break
           case 3: name = 'tylina'; input = { command: 'document.validate', args: {} }; break
           case 4:
-            assert.equal(value().valid, true)
+            assert.ok(/^Document (?:is )?valid\b/iu.test(text()),
+              `validation result must be readable: ${text()}`)
             name = 'tylina'; input = { command: 'document.export',
               args: { format: 'pdf', destination: 'output/Agent.pdf', overwrite: true } }; break
           case 5:
-            assert.deepEqual(value().paths, ['output/Agent.pdf'])
+            assert.ok(text().includes('output/Agent.pdf'),
+              `export result must name its output: ${text()}`)
             name = 'tylina'; input = { command: 'render.page', args: { page: 1 } }; break
           default:
             assert.ok(prior.content.some((block) => block.type === 'image' && block.attachment?.attachmentId))

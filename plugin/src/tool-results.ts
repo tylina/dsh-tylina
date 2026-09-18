@@ -4,6 +4,9 @@ import type { ToolDefinition } from '@deepseek-ai/dsh-tools'
 import type { ToolResult } from 'tylina-sdk/tools'
 
 interface HarnessToolValue { structuredContent: object | null; content: ContentBlock[] }
+const MAX_MODEL_TEXT_CODE_UNITS = 64 * 1024
+const MODEL_TEXT_TRUNCATION_NOTICE =
+  '\n\n[Readable tool output truncated at the model result limit.]'
 const dimensions = { type: 'object', properties: { width: { type: 'integer' }, height: { type: 'integer' } },
   required: ['width', 'height'], additionalProperties: false } as const
 
@@ -35,9 +38,12 @@ export async function admitTylinaToolResult(
   signal.throwIfAborted()
   if (!result || !Array.isArray(result.content) || result.content.length > 32) throw new Error('Invalid Tylina tool result')
   if (result.isError) throw new Error(result.content.filter((part) => part.type === 'text').map((part) => part.text).join('\n').slice(0, 8192) || 'The Tylina tool failed')
+  const content = result.content.map((part): ToolResult['content'][number] =>
+    part.type === 'text' ? { ...part, text: boundModelText(part.text) } : part
+  )
   let totalBytes = 0
   const images = []
-  for (const part of result.content) {
+  for (const part of content) {
     if (part.type === 'text' && typeof part.text === 'string') totalBytes += Buffer.byteLength(part.text)
     else if (part.type === 'image' && typeof part.data === 'string' &&
       ['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(part.mimeType)) {
@@ -55,6 +61,12 @@ export async function admitTylinaToolResult(
   signal.throwIfAborted()
   let imageIndex = 0
   return { structuredContent: result.structuredContent ?? null,
-    content: result.content.map((part): ContentBlock => part.type === 'text'
+    content: content.map((part): ContentBlock => part.type === 'text'
       ? { type: 'text', text: part.text } : { type: 'image', attachment: saved[imageIndex++] }) }
+}
+
+function boundModelText(value: string): string {
+  if (value.length <= MAX_MODEL_TEXT_CODE_UNITS) return value
+  return value.slice(0, MAX_MODEL_TEXT_CODE_UNITS - MODEL_TEXT_TRUNCATION_NOTICE.length) +
+    MODEL_TEXT_TRUNCATION_NOTICE
 }

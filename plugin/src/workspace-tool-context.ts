@@ -6,8 +6,16 @@ export function withWorkspaceToolContext(call: EditorToolCaller, root: string): 
     signal.throwIfAborted()
     const value = await call(name, input, signal)
     if (!isWorkspaceInfo(name, input) || value.isError || !value.structuredContent) return value
-    const data = { ...value.structuredContent, root }
-    return { ...value, structuredContent: data, content: [{ type: 'text', text: JSON.stringify(data) }] }
+    const data: Record<string, unknown> = { ...value.structuredContent, root }
+    return { ...value, structuredContent: data, content: [{
+      type: 'text',
+      text: [
+        `Workspace: ${root}`,
+        `Main file: ${String(data.mainFile ?? 'none')}`,
+        `Known files: ${String(data.sourceFileCount ?? '?')} Typst source(s), ` +
+          `${String(data.resourceFileCount ?? '?')} resource(s)`
+      ].join('\n')
+    }] }
   }
 }
 

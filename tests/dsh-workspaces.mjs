@@ -21,7 +21,7 @@ await require('esbuild').build({ entryPoints: [join(root, 'plugin/src/workspaces
   outfile: join(temporary, 'workspaces.cjs'), bundle: true, platform: 'node', format: 'cjs', target: 'node22' })
 const { createHarnessWorkspaces, resolveHarnessProject } = require(join(temporary, 'workspaces.cjs'))
 
-async function setup(t, mode = 'wasm') {
+async function setup(t, mode = 'wasm', persistence) {
   const directory = await realpath(await mkdtemp(join(tmpdir(), 'tylina-harness-project-')))
   const ctx = new Context()
   await ctx.plugin(LocalFileSystem, { cwd: directory })
@@ -30,7 +30,7 @@ async function setup(t, mode = 'wasm') {
   const agent = { ctx: agentOwner.ctx, session: { header: { cwd: directory } } }
   // Only the session controller boundary is substituted; paths and storage use the released backend and real disk.
   let routed = 0
-  const projects = createHarnessWorkspaces({ fs: ctx.fs, sessions: { get(id) { return ['owner', 'cold-child'].includes(id) ? agent.session : undefined } }, get() { return undefined },
+  const projects = createHarnessWorkspaces({ fs: ctx.fs, sessions: { get(id) { return ['owner', 'cold-child'].includes(id) ? agent.session : undefined } }, get(name) { return name === 'sessionPersistence' ? persistence : undefined },
     agents: { get(id) { return id === 'child' ? agent : undefined } }, sessionController: { async resolveAgent(id) {
     routed++
     return id === 'owner' ? { agent } : { error: { message: 'Unknown session' } }
@@ -44,6 +44,30 @@ async function setup(t, mode = 'wasm') {
   await writeFile(join(directory, 'paper', 'main.typ'), '\uFEFF= 原文\r\n')
   return { ctx, directory, url, routed: () => routed }
 }
+
+for (const [name, persistence] of [
+  ['legacy inspect metadata', (directory, calls) => ({
+    async inspect(id, signal) { calls.push({ id, signal }); return { meta: { cwd: directory } } }
+  })],
+  ['current stat metadata', (directory, calls) => ({
+    async stat(id, options) { calls.push({ id, signal: options?.signal }); return { header: { cwd: directory } } }
+  })]
+]) test(`a saved session opens through ${name} without activating its Agent`, async (t) => {
+  const calls = []
+  let directory
+  const bridge = new Proxy({}, { get(_target, property) { return persistence(directory, calls)[property] } })
+  const setupResult = await setup(t, 'wasm', bridge)
+  directory = setupResult.directory
+  const { url, routed } = setupResult
+  url.searchParams.set('session', 'persisted')
+  const response = await fetch(url)
+  assert.equal(response.status, 200)
+  assert.equal((await response.json()).workspace.filePaths.includes('main.typ'), true)
+  assert.equal(routed(), 0)
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0].id, 'persisted')
+  assert.ok(calls[0].signal instanceof AbortSignal)
+})
 
 test('released Harness filesystem maps a selected project into versioned source/resource HTTP storage', async (t) => {
   const { directory, url } = await setup(t)

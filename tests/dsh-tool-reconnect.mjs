@@ -8,6 +8,9 @@ export async function verifyToolReconnect({ page, frame, root, mode, readMain, p
   const call = (command, args = {}) => probeRequest({ name: 'tylina', input: { command, args } })
   const view = (await call('view.state')).value.structuredContent
   await call('view.set', { target: 'mode', value: 'split' })
+  const rootElement = frame.getByTestId('tylina-root')
+  const sidebarWasOpen = await rootElement.getAttribute('data-workspace-sidebar-collapsed') !== 'true'
+  if (sidebarWasOpen) await frame.getByRole('button', { name: 'Sidebar', exact: true }).click()
   let releaseSave, saves = 0
   const gate = new Promise(resolve => { releaseSave = resolve })
   const routes = new Set(), routeErrors = []
@@ -24,7 +27,7 @@ export async function verifyToolReconnect({ page, frame, root, mode, readMain, p
   await page.route('**/tylina/project?**', holdSave)
   try {
     const source = frame.getByTestId('monaco-source-editor')
-    await source.click({ position: { x: 150, y: 12 } })
+    await source.click({ position: { x: 20, y: 12 } })
     await page.keyboard.press(process.platform === 'darwin' ? 'Meta+ArrowDown' : 'Control+End')
     await page.keyboard.insertText(' Pending user save.')
     await expect.poll(() => saves).toBeGreaterThan(0)
@@ -39,7 +42,7 @@ export async function verifyToolReconnect({ page, frame, root, mode, readMain, p
     void result.catch(() => undefined)
     await entered
     await page.getByRole('button', { name: /^(重新连接 Agent 工具|Reconnect Agent tools)$/u }).click()
-    await source.click({ position: { x: 150, y: 12 } })
+    await source.click({ position: { x: 20, y: 12 } })
     await page.keyboard.press(process.platform === 'darwin' ? 'Meta+ArrowDown' : 'Control+End')
     await page.keyboard.insertText(' Input stays responsive.')
     await expect(source).toContainText('Input stays responsive.')
@@ -64,6 +67,7 @@ export async function verifyToolReconnect({ page, frame, root, mode, readMain, p
     await expect.poll(readMain).not.toBe(beforeUndo)
   }
   await expect.poll(readMain).toBe(original)
+  if (sidebarWasOpen) await frame.getByRole('button', { name: 'Sidebar', exact: true }).click()
   await call('view.set', { target: 'mode', value: view.mode })
   console.log(`PASS ${mode}: reconnect during save preserves responsive typing, canonical content and Undo`)
 }

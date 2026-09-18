@@ -147,7 +147,7 @@ export async function openHarnessDocument(container: HTMLElement, options: {
         context?.signal?.throwIfAborted()
         if (!saved) throw new Error('Resolve the workspace save issue before continuing')
         const value = { saved: true }
-        return { structuredContent: value, content: [{ type: 'text', text: JSON.stringify(value) }] }
+        return { structuredContent: value, content: [{ type: 'text', text: 'Workspace saved.' }] }
       }
       return editor.callTool(name, input, context)
     }

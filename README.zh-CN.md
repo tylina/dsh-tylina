@@ -65,6 +65,14 @@ dsh plugin --profile web add dsh-tylina-native
 
 </details>
 
+## 在真实工作区里完成文档
+
+把对话、文件与成品页面放在同一个工作区。让 Agent 准备初稿后，直接检查和修改排版结果，再导出交付。
+
+<table>
+<tr><td align="center" width="50%"><strong>在审阅旁打磨简历</strong><br><img src="docs/media/cv.png" height="230" alt="DeepSeek Harness 对话旁显示 Tylina 中完成的简历"></td><td align="center" width="50%"><strong>把乐谱从源码做到交付</strong><br><img src="docs/media/music.png" height="230" alt="DeepSeek Harness 对话旁显示 Tylina 中排版完成的乐谱"></td></tr>
+</table>
+
 ## 你可以做什么
 
 从模板开始，用自然语言和直接编辑共同完成作品。以下都是实际编译出的模板示例。

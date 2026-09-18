@@ -64,6 +64,15 @@ Wait for it to become eligible, or use the exact update command in that [release
 
 </details>
 
+## Work with real documents
+
+Keep the conversation, files, and finished page in one workspace. Ask the agent to prepare a draft,
+then inspect and revise the typeset result directly before you export it.
+
+<table>
+<tr><td align="center" width="50%"><strong>Polish a résumé beside the review</strong><br><img src="docs/media/cv.png" height="230" alt="A DeepSeek Harness conversation beside a finished résumé in Tylina"></td><td align="center" width="50%"><strong>Take a score from source to delivery</strong><br><img src="docs/media/music.png" height="230" alt="A DeepSeek Harness conversation beside a typeset music score in Tylina"></td></tr>
+</table>
+
 ## What will you make?
 
 Start with a template, then shape it through conversation and direct editing. These are real compiled template examples.

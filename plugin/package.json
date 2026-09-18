@@ -1,6 +1,6 @@
 {
   "name": "@tylina/dsh-plugin",
-  "version": "0.15.2",
+  "version": "0.15.3-alpha.1",
   "type": "module",
   "description": "Tylina document editor for DeepSeek Harness",
   "license": "UNLICENSED",

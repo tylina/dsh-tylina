@@ -256,7 +256,8 @@ for (const mode of modes) {
     const validated = await command('document.validate')
     assert.equal(validated.isError, false, JSON.stringify(validated))
     assert.equal(validated.value.structuredContent.valid, true)
-    assert.match(validated.content.find((part) => part.type === 'text')?.text ?? '', /^Document (?:is )?valid\b/iu)
+    assert.match(validated.content.find((part) => part.type === 'text')?.text ?? '',
+      /^(?:Document (?:is )?valid\b|Compilation succeeded: .+\.typ\.)/iu)
     assert.ok(!validated.content.some((part) => part.type === 'text' && part.text.includes('"valid"')),
       'the installed Harness model result must not receive the legacy canonical JSON envelope')
     phase = 'installed-mcp'
@@ -386,7 +387,7 @@ for (const mode of modes) {
     const validationCard = page.locator('.tylina-tool-card').filter({ hasText: 'document.validate' }).last()
     await expect(validationCard).toBeVisible()
     await validationCard.locator('summary').click()
-    await expect(validationCard).toContainText(/Document (?:is )?valid/u)
+    await expect(validationCard).toContainText(/(?:Document (?:is )?valid|Compilation succeeded: .+\.typ\.)/u)
     assert.ok(!(await validationCard.innerText()).includes('"valid"'),
       'the DSH card must present validation prose rather than canonical JSON')
     const imageCard = page.locator('.tylina-tool-card').filter({ hasText: 'render.page' }).last()

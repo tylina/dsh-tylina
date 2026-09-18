@@ -63,7 +63,7 @@ export function createModelFixture(ctx) {
               old_string: 'External Harness edit', new_string: `External Harness edit\r\n${run.marker}` }; break
           case 3: name = 'tylina'; input = { command: 'document.validate', args: {} }; break
           case 4:
-            assert.ok(/^Document (?:is )?valid\b/iu.test(text()),
+            assert.ok(/^(?:Document (?:is )?valid\b|Compilation succeeded: .+\.typ\.)/iu.test(text()),
               `validation result must be readable: ${text()}`)
             name = 'tylina'; input = { command: 'document.export',
               args: { format: 'pdf', destination: 'output/Agent.pdf', overwrite: true } }; break

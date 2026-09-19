@@ -35,27 +35,29 @@
   #line(length: 100%, stroke: 1.2pt + ink)
   #v(18pt)
   #grid(columns: (1fr, 1fr), column-gutter: 24pt,
-    text(font: ("IBM Plex Mono", "Arial"), size: 13pt, weight: 700, tracking: 1.5pt,
-      fill: red, [01 论文与报告]),
-    text(font: ("IBM Plex Mono", "Arial"), size: 13pt, weight: 700, tracking: 1.5pt,
-      fill: red, [02 简历与海报]),
-    text(font: ("IBM Plex Mono", "Arial"), size: 13pt, weight: 700, tracking: 1.5pt,
-      fill: red, [03 图表与乐谱]),
-    text(font: ("IBM Plex Mono", "Arial"), size: 13pt, weight: 700, tracking: 1.5pt,
-      fill: red, [04 PPTX Slides]),
+    stack(
+      spacing: 5pt,
+      text(font: ("IBM Plex Mono", "Arial"), size: 14pt, weight: 700, tracking: 1.5pt,
+        fill: red, [01 论文 · 报告 · 简历]),
+      text(font: ("Noto Serif SC", "Songti SC"), size: 17pt, fill: muted,
+        [从源码到排版成稿]),
+    ),
+    stack(
+      spacing: 5pt,
+      text(font: ("IBM Plex Mono", "Arial"), size: 14pt, weight: 700, tracking: 1.5pt,
+        fill: red, [02 图表 · 海报 · PPTX]),
+      text(font: ("Noto Serif SC", "Songti SC"), size: 17pt, fill: muted,
+        [把 Slides 也放进工作区]),
+    ),
   )
 ])
 
 #place(top + left, pad(left: 66pt, top: 906pt, right: 370pt)[
-  #grid(columns: (1fr, 1fr), rows: (128pt, 128pt), column-gutter: 16pt, row-gutter: 16pt,
+  #grid(columns: (1fr, 1fr), column-gutter: 18pt,
     box(fill: white, stroke: 0.8pt + rgb("#deded7"), inset: 8pt,
-      image("cv.png", width: 254pt, height: 112pt, fit: "cover")),
+      image("paper.png", width: 292pt, height: 196pt, fit: "contain")),
     box(fill: white, stroke: 0.8pt + rgb("#deded7"), inset: 8pt,
-      image("chart-area.png", width: 254pt, height: 112pt, fit: "cover")),
-    box(fill: white, stroke: 0.8pt + rgb("#deded7"), inset: 8pt,
-      image("music.png", width: 254pt, height: 112pt, fit: "cover")),
-    box(fill: white, stroke: 0.8pt + rgb("#deded7"), inset: 8pt,
-      image("harness-slides.png", width: 254pt, height: 112pt, fit: "cover")),
+      image("slides.png", width: 292pt, height: 196pt, fit: "contain")),
   )
 ])
 

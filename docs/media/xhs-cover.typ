@@ -23,41 +23,22 @@
   #v(32pt)
   #text(font: ("Noto Sans SC", "PingFang SC"), size: 79pt, weight: 700,
     fill: ink)[原来 DSH#linebreak()也能写论文、#linebreak()简历和 PPT]
-  #v(32pt)
-  #rect(width: 96pt, height: 8pt, fill: red)
-  #v(28pt)
+  #v(42pt)
   #text(font: ("Noto Serif SC", "Songti SC"), size: 26pt, fill: muted)[
     一个插件，把写作、排版和交付放进同一个工作区。
   ]
 ])
 
-#place(top + left, pad(left: 66pt, top: 726pt, right: 370pt)[
+#place(top + left, pad(left: 66pt, top: 760pt, right: 370pt)[
   #line(length: 100%, stroke: 1.2pt + ink)
-  #v(18pt)
-  #grid(columns: (1fr, 1fr), column-gutter: 24pt,
-    stack(
-      spacing: 5pt,
-      text(font: ("IBM Plex Mono", "Arial"), size: 14pt, weight: 700, tracking: 1.5pt,
-        fill: red, [01 论文 · 报告 · 简历]),
-      text(font: ("Noto Serif SC", "Songti SC"), size: 17pt, fill: muted,
-        [从源码到排版成稿]),
-    ),
-    stack(
-      spacing: 5pt,
-      text(font: ("IBM Plex Mono", "Arial"), size: 14pt, weight: 700, tracking: 1.5pt,
-        fill: red, [02 图表 · 海报 · PPTX]),
-      text(font: ("Noto Serif SC", "Songti SC"), size: 17pt, fill: muted,
-        [把 Slides 也放进工作区]),
-    ),
-  )
 ])
 
-#place(top + left, pad(left: 66pt, top: 906pt, right: 370pt)[
+#place(top + left, pad(left: 66pt, top: 896pt, right: 370pt)[
   #grid(columns: (1fr, 1fr), column-gutter: 18pt,
     box(fill: white, stroke: 0.8pt + rgb("#deded7"), inset: 8pt,
-      image("paper.png", width: 292pt, height: 196pt, fit: "contain")),
+      image("cv.png", width: 292pt, height: 196pt, fit: "contain")),
     box(fill: white, stroke: 0.8pt + rgb("#deded7"), inset: 8pt,
-      image("slides.png", width: 292pt, height: 196pt, fit: "contain")),
+      image("music.png", width: 292pt, height: 196pt, fit: "contain")),
   )
 ])
 
